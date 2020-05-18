@@ -1,7 +1,13 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 문예리 - 112(raspberry pi 3), 117(Raspberry pi 4), 118(Jetson nano), 119(Server PC), 120(Window PC)
 김주성 - 101~105
 이명상 - 
+=======
+문예리 - 112(raspberry pi 3), 117(Raspberry pi 4), 118(Jetson nano), 119(Server PC), 120(Window PC)
+김주성 - 101~105
+이명상 - 
+>>>>>>> 3b9e6ec547696db21ad2c69bd667a124b2f851ab
 =======
 문예리 - 112(raspberry pi 3), 117(Raspberry pi 4), 118(Jetson nano), 119(Server PC), 120(Window PC)
 김주성 - 101~105
