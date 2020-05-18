@@ -159,7 +159,7 @@ void loop()
   if((t-tTime[6]) >= (1000 / IMU_PUBLISH_FREQUENCY))
   {
     CDS();
-    
+    tTime[6] = t;
   }
 
   // Send log message after ROS connection
