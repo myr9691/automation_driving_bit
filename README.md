@@ -22,11 +22,10 @@ $ git push origin master
 * ~~차선인식 Python -> C++~~
 * 영상처리한 영상 ROS 송수신 확인
 * ~~소스 코드 업로드~~
-* sd카드 백업
-* 차선인식 코드에 ROS 기울기 값 publish
 ###### 이명상
-*
-*
+* Transfer Learning Test(TensorFlow SSD v2 / Darknet Yolov3)
+* 신호등 인식 (OpenCV)
+* 
 ###### 김주성
 * 조도센서를 이용한 LED 자동제어 (ROS통합버젼 완료)
 * Gstreamer를 이용한 해상도 조절 및 공부
