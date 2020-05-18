@@ -28,4 +28,5 @@ $ git push origin master
 ###### 김주성
 * 조도센서를 이용한 LED 자동제어 (ROS통합버젼 완료)
 * Gstreamer를 이용한 해상도 조절 및 공부
+* 세트 만들기 도움
 ***
