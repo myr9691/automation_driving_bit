@@ -156,7 +156,7 @@ void loop()
   }
 #endif
 
-  if((t-tTime[6]) >= (1000 / CMD_VEL_PUBLISH_FREQUENCY))
+  if((t-tTime[6]) >= (1000 / IMU_PUBLISH_FREQUENCY))
   {
     CDS();
     
