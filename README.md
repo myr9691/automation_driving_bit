@@ -22,7 +22,7 @@ $ git push origin master
 * ~~차선인식 Python -> C++~~
 * 영상처리한 영상 ROS 송수신 확인
 * ~~소스 코드 업로드~~
-* sd 카드 백업
+* ~~sd 카드 백업~~
 * 차선인식 코드에 ROS 기울기값 publish
 ###### 이명상
 * Transfer Learning Test(TensorFlow SSD v2 / Darknet Yolov3)
