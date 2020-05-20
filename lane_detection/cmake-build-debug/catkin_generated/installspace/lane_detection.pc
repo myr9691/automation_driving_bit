@@ -1,8 +1,0 @@
-prefix=/usr/local
-
-Name: lane_detection
-Description: Description of lane_detection
-Version: 0.0.0
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib -llane_detection
-Requires: cv_bridge image_transport roscpp sensor_msgs std_msgs

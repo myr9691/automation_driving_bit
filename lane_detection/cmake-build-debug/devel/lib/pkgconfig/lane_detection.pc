@@ -1,8 +1,0 @@
-prefix=/home/moon/catkin_ws/src/lane_detection/cmake-build-debug/devel
-
-Name: lane_detection
-Description: Description of lane_detection
-Version: 0.0.0
-Cflags: -I/home/moon/catkin_ws/src/lane_detection/include
-Libs: -L${prefix}/lib -llane_detection
-Requires: cv_bridge image_transport roscpp sensor_msgs std_msgs
