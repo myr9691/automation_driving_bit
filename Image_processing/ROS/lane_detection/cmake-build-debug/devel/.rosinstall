@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/moon/catkin_ws/src/lane_detection/cmake-build-debug/devel/setup.sh
