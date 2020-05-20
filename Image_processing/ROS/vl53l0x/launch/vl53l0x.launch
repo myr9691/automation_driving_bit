@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="vl53l0x" type="vl53l0x_node" name="vl53l0x" clear_params="true">
+        <param name="long_range" value="1"/>
+        <param name="poll_rate" value="100"/>
+        <param name="i2c_bus" value="0"/>
+    </node>
+</launch>
