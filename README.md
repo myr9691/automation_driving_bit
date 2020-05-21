@@ -23,7 +23,7 @@ $ git push origin master
 * 영상처리한 영상 ROS 송수신 확인
 * ~~소스 코드 업로드~~
 * ~~sd 카드 백업~~
-* 차선인식 코드에 ROS 기울기값 publish
+* 차선인식 코드 + ROS center publish code
 ###### 이명상
 * Transfer Learning Test(TensorFlow SSD v2 / Darknet Yolov3)
 * 신호등 인식 (OpenCV)
