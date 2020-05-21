@@ -20,7 +20,7 @@ $ git push origin master
 ***
 ###### 문예리
 * ~~차선인식 Python -> C++~~
-* 영상처리한 영상 ROS 송수신 확인
+* ~~영상처리한 영상 ROS 송수신 확인~~
 * ~~소스 코드 업로드~~
 * ~~sd 카드 백업~~
 * 차선인식 코드 + ROS center publish code
