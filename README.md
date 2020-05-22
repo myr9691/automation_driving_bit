@@ -25,9 +25,9 @@ $ git push origin master
 * ~~sd 카드 백업~~
 * 차선인식 코드 + ROS center publish code
 ###### 이명상
-* Transfer Learning Test(TensorFlow SSD v2 / Darknet Yolov3)
+* ~~Transfer Learning Test(TensorFlow SSD v2 / Darknet Yolov3)
 * 신호등 인식 (OpenCV)
-* ROS OpenCV 테스트
+* ~~ROS OpenCV 테스트
 ###### 김주성
 * 조도센서를 이용한 LED 자동제어 (ROS통합버젼 완료)
 * Gstreamer를 이용한 해상도 조절 (완료) 
