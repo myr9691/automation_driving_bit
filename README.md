@@ -44,7 +44,7 @@ $ git push origin master
 ###### 김주성
 * I2C 2개이상 디바이스 연결
 * QT공부
-* LED 납땜
+* ~~LED 납땜~~
 ###### 이명상
 * Realsense D435i Camera로 거리 측정
 * Turtlebot3 기구설계
