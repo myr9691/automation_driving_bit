@@ -43,5 +43,5 @@ $ git push origin master
 ###### 김주성
 * I2C 2개이상 디바이스 연결
 * QT공부
-*
+* LED 납땜
 * 
