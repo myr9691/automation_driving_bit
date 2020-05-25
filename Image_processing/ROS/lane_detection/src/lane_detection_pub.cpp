@@ -5,6 +5,7 @@
 #include <ros/ros.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <std_msgs/UInt8MultiArray.h>
+#include <std_msgs/Int32.h>
 #include <vector>
 
 using namespace std;
@@ -13,7 +14,6 @@ static double ym_per_pix = 30.0 / 480;
 static double xm_per_pix = 3.7 / 480;
 static double h = 480;
 static double w = 640;
-static int midpoint = 300;
 
 typedef struct warpped_ret
 {
@@ -21,27 +21,35 @@ typedef struct warpped_ret
     cv::Mat minverse;
 }ret1;
 
+typedef struct lane_detect
+{
+    cv::Mat out_img;
+    int center = 0;
+}ret2;
+
 //*******FUNCTION**********
 //ret1 calibration(void);
 ret1 warpping(const cv::Mat &image);
 cv::Mat roi(const cv::Mat &image);
 cv::Mat plothistogram(const cv::Mat &);
-cv::Mat window_roi(const cv::Mat &binary_img, const cv::Mat &hist, int midpoint, const cv::Mat &warped_img, int num);
+ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &warped_img, int num);
 //*************************
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lane_detect");
     ros::NodeHandle nh;
-    ros::Publisher pub = nh.advertise<std_msgs::UInt8MultiArray>("camera/image", 1);
+    ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
+    ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
 
-    cv::VideoCapture cap("/home/moon/Downloads/drive_test_01.avi");
+    cv::VideoCapture cap("/home/moon/Downloads/drive_test.avi");
 
     cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
     cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
 
     ret1 r1;
+    ret2 r2;
 
     while(nh.ok())
     {
@@ -50,7 +58,8 @@ int main(int argc, char** argv)
 
         if(!src.empty())
         {
-            cv::Mat gray, not_gray, img, warped_img, minv, roi_img, thresh, hist, out;
+            cv::Mat gray, img, warped_img, minv, roi_img, thresh, hist, out, rotate_img;
+            int ct;
             vector<uchar> encode;
             vector<int> encode_param;
 
@@ -59,10 +68,12 @@ int main(int argc, char** argv)
 
             //Gray scale
             cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
-            not_gray = ~gray;
+
+            //180도 rotation
+            cv::flip(src, rotate_img, -1);
 
             //Fisheye lense calibration
-            cv::undistort(not_gray, img, mtx, dist, newcameramtx);
+            cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
 
             //Warpped img
             r1 = warpping(img);
@@ -73,23 +84,28 @@ int main(int argc, char** argv)
             roi_img = roi(warped_img);
 
             //Threshold
-            cv::threshold(roi_img, thresh, 180, 255, cv::THRESH_BINARY);
+            cv::threshold(roi_img, thresh, 205, 255, cv::THRESH_BINARY);
 
             //Histogram
             hist = plothistogram(thresh);
 
             //Window ROI
-            out = window_roi(thresh, hist, midpoint, warped_img, 1);
+            r2 = window_roi(thresh, hist, warped_img, 1);
+            out = r2.out_img;
+            ct = r2.center;
 
             cv::imshow("result", out);
 
             cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
 
             std_msgs::UInt8MultiArray msgArray;
+            std_msgs::Int32 lane_center;
+            lane_center.data = ct;
             msgArray.data.clear();
             std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
 
-            pub.publish(msgArray);
+            img_pub.publish(msgArray);
+            center_pub.publish(lane_center);
 
             int key = cv::waitKey(2);
             if(key == 27)
@@ -133,10 +149,12 @@ cv::Mat plothistogram(const cv::Mat &image)
     return hist;
 }
 
-cv::Mat window_roi(const cv::Mat &binary_img, const cv::Mat &hist, int midpoint, const cv::Mat &warped_img, int num) {
+ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &warped_img, int num) {
+    ret2 r2;
     cv::Mat out_img, nonzero, nonzero_x, nonzero_y;
     //binary_img.copyTo(out_img);
     int max_left = 0, max_right = 0, margin = 30, minpix = 50, thickness = 2;
+    int center;
     cv::Scalar color(0, 255, 0);
     vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
     merge(temp, out_img);
@@ -180,6 +198,10 @@ cv::Mat window_roi(const cv::Mat &binary_img, const cv::Mat &hist, int midpoint,
 
     }
 
-    return out_img;
+    center = (max_left + max_right) / 2;
+    r2.out_img = out_img;
+    r2.center = center;
+
+    return r2;
 }
 
