@@ -46,5 +46,7 @@ $ git push origin master
 * QT공부
 * LED 납땜
 ###### 이명상
-*
+* Realsense D435i Camera로 거리 측정
+* Turtlebot3 기구설계
+* 객체 인식 & 영상 처리 통합
 ***
