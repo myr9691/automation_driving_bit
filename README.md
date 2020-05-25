@@ -37,11 +37,10 @@ $ git push origin master
 #### 2020-05-25
 ***
 ###### 문예리
-* 차선인식 코드 + ROS center publish code
-* 코스 영상 새로 촬영 -> 차선 인식 코드 수정
+* ~~차선인식 코드 + ROS center publish code~~
+* ~~코스 영상 새로 촬영 -> 차선 인식 코드 수정~~
 * turtlebot3 자율 주행 코드 실행
 ###### 김주성
 * <h1> I2C 2개이상 디바이스 연결
 * QT공부
 * LED 납땜
-* 
