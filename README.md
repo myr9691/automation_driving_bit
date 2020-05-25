@@ -29,8 +29,14 @@ $ git push origin master
 * 신호등 인식 (OpenCV)
 * ~~ROS OpenCV 테스트~~
 ###### 김주성
-* 조도센서를 이용한 LED 자동제어 (ROS통합버젼 완료)
-* Gstreamer를 이용한 해상도 조절 (완료) 
+* ~~조도센서를 이용한 LED 자동제어 (ROS통합버젼)~~
+* ~~Gstreamer를 이용한 해상도 조절~~
 * Gstreamer를 이용한 압축
-* 세트 만들기 도움(완료)
+* ~~세트 만들기 도움~~
 ***
+#### 2020-05-25
+***
+###### 문예리
+* 차선인식 코드 + ROS center publish code
+* 코스 영상 새로 촬영 -> 차선 인식 코드 수정
+* turtlebot3 자율 주행 코드 실행
