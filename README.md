@@ -42,7 +42,8 @@ $ git push origin master
 * turtlebot3 자율 주행 코드 실행 수정 -> window 개수 2개, 빛 반사 보정
 * camera calibration 값 수정 (체스보드 이미지 새로 찍기)
 ###### 김주성
-* I2C 2개이상 디바이스 연결
+* ~~I2C 2개이상 디바이스 연결
+* 라이다 연결
 * QT공부
 * ~~LED 납땜~~
 ###### 이명상
