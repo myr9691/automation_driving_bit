@@ -39,7 +39,7 @@ $ git push origin master
 ###### 문예리
 * ~~차선인식 코드 + ROS center publish code~~
 * ~~코스 영상 새로 촬영 -> 차선 인식 코드 수정~~
-* turtlebot3 자율 주행 코드 실행
+* turtlebot3 자율 주행 코드 실행 수정 -> window 개수 2개, 빛 반사 보정
 * camera calibration 값 수정 (체스보드 이미지 새로 찍기)
 ###### 김주성
 * I2C 2개이상 디바이스 연결
