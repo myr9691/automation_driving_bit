@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(vl53l0x)
+project(vl53l0x_parking)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,9 +8,12 @@ project(vl53l0x)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  geometry_msgs
+  message_generation
   roscpp
   sensor_msgs
-  message_generation
+  std_msgs
+  turtlebot3_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -69,8 +72,8 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-   DEPENDENCIES
-   std_msgs  # Or other packages containing msgs
+  DEPENDENCIES
+  geometry_msgs   sensor_msgs   std_msgs   turtlebot3_msgs
 )
 
 ################################################
@@ -104,9 +107,9 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES vl53l0x_ros
-#  CATKIN_DEPENDS roscpp
-CATKIN_DEPENDS message_runtime
+#  LIBRARIES vl53l0x_parking
+#  CATKIN_DEPENDS geometry_msgs message_generation roscpp sensor_msgs std_msgs turtlebot3_msgs
+	CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
 
@@ -118,14 +121,13 @@ CATKIN_DEPENDS message_runtime
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-  src
+	src
   ${catkin_INCLUDE_DIRS}
 )
 
-
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/vl53l0x_ros.cpp
+#   src/${PROJECT_NAME}/vl53l0x_parking.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -136,11 +138,9 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/vl53l0x_ros_node.cpp)
-add_executable(${PROJECT_NAME}_node
-  src/vl53l10.cpp
-  src/tof.cpp
-)
+add_executable(${PROJECT_NAME}_node 
+	src/vl53l0x_parking.cpp
+  src/tof.cpp)
 
 add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_generate_messages_cpp)
 
@@ -156,7 +156,7 @@ add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
-   ${catkin_LIBRARIES}
+  ${catkin_LIBRARIES}
 )
 
 #############
@@ -168,7 +168,7 @@ target_link_libraries(${PROJECT_NAME}_node
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
+# catkin_install_python(PROGRAMS
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
@@ -206,7 +206,7 @@ target_link_libraries(${PROJECT_NAME}_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_vl53l0x_ros.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_vl53l0x_parking.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
