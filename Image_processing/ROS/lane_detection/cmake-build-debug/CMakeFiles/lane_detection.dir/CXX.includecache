@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/moon/catkin_ws/src/lane_detection/src/lane_detection_pub.cpp
+/home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/src/lane_detection_pub.cpp
 iostream
 -
 cv_bridge/cv_bridge.h
@@ -20,6 +20,8 @@ ros/ros.h
 opencv2/highgui/highgui.hpp
 -
 std_msgs/UInt8MultiArray.h
+-
+std_msgs/Int32.h
 -
 vector
 -
@@ -841,6 +843,22 @@ string
 -
 
 /opt/ros/melodic/include/std_msgs/Header.h
+string
+-
+vector
+-
+map
+-
+ros/types.h
+-
+ros/serialization.h
+-
+ros/builtin_message_traits.h
+-
+ros/message_operations.h
+-
+
+/opt/ros/melodic/include/std_msgs/Int32.h
 string
 -
 vector

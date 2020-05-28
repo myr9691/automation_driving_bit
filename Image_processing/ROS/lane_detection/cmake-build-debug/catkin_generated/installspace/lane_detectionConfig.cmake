@@ -67,8 +67,8 @@ set(lane_detection_CONFIG_INCLUDED TRUE)
 
 # set variables for source/devel/install prefixes
 if("FALSE" STREQUAL "TRUE")
-  set(lane_detection_SOURCE_PREFIX /home/moon/catkin_ws/src/lane_detection)
-  set(lane_detection_DEVEL_PREFIX /home/moon/catkin_ws/devel)
+  set(lane_detection_SOURCE_PREFIX /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection)
+  set(lane_detection_DEVEL_PREFIX /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug/devel)
   set(lane_detection_INSTALL_PREFIX "")
   set(lane_detection_PREFIX ${lane_detection_DEVEL_PREFIX})
 else()
@@ -91,9 +91,9 @@ endif()
 # flag project as catkin-based to distinguish if a find_package()-ed project is a catkin project
 set(lane_detection_FOUND_CATKIN_PROJECT TRUE)
 
-if(NOT "include " STREQUAL " ")
+if(NOT " " STREQUAL " ")
   set(lane_detection_INCLUDE_DIRS "")
-  set(_include_dirs "include")
+  set(_include_dirs "")
   if(NOT " " STREQUAL " ")
     set(_report "Check the issue tracker '' and consider creating a ticket if the problem has not been reported yet.")
   elseif(NOT " " STREQUAL " ")

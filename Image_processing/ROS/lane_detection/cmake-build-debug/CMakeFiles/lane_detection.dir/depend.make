@@ -74,6 +74,7 @@ CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/inc
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/sensor_msgs/RegionOfInterest.h
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/sensor_msgs/image_encodings.h
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/std_msgs/Header.h
+CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/std_msgs/Int32.h
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/std_msgs/MultiArrayDimension.h
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/std_msgs/MultiArrayLayout.h
 CMakeFiles/lane_detection.dir/src/lane_detection_pub.cpp.o: /opt/ros/melodic/include/std_msgs/UInt8MultiArray.h

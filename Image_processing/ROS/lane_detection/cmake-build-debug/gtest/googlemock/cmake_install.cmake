@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/moon/catkin_ws/src/lane_detection/cmake-build-debug/gtest/googlemock/gtest/cmake_install.cmake")
+  include("/home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug/gtest/googlemock/gtest/cmake_install.cmake")
 
 endif()
 

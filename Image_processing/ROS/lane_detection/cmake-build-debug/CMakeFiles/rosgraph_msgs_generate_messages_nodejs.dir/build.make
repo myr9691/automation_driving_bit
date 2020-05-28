@@ -43,10 +43,10 @@ RM = /home/moon/clion-2020.1.1/bin/cmake/linux/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/moon/catkin_ws/src/lane_detection
+CMAKE_SOURCE_DIR = /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/moon/catkin_ws/src/lane_detection/cmake-build-debug
+CMAKE_BINARY_DIR = /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug
 
 # Utility rule file for rosgraph_msgs_generate_messages_nodejs.
 
@@ -67,6 +67,6 @@ CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/clean:
 .PHONY : CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/clean
 
 CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/depend:
-	cd /home/moon/catkin_ws/src/lane_detection/cmake-build-debug && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/moon/catkin_ws/src/lane_detection /home/moon/catkin_ws/src/lane_detection /home/moon/catkin_ws/src/lane_detection/cmake-build-debug /home/moon/catkin_ws/src/lane_detection/cmake-build-debug /home/moon/catkin_ws/src/lane_detection/cmake-build-debug/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug/CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/rosgraph_msgs_generate_messages_nodejs.dir/depend
 

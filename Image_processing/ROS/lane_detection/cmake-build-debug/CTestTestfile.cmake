@@ -1,6 +1,6 @@
 # CMake generated Testfile for 
-# Source directory: /home/moon/catkin_ws/src/lane_detection
-# Build directory: /home/moon/catkin_ws/src/lane_detection/cmake-build-debug
+# Source directory: /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection
+# Build directory: /home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug
 # 
 # This file includes the relevant testing commands required for 
 # testing this directory and lists subdirectories to be tested as well.

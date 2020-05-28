@@ -28,7 +28,7 @@ typedef struct lane_detect
 }ret2;
 
 //*******FUNCTION**********
-//ret1 calibration(void);
+cv::Mat color_filter(const cv::Mat &);
 ret1 warpping(const cv::Mat &image);
 cv::Mat roi(const cv::Mat &image);
 cv::Mat plothistogram(const cv::Mat &);
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
         if(!src.empty())
         {
-            cv::Mat gray, img, warped_img, minv, roi_img, thresh, hist, out, rotate_img;
+            cv::Mat filtered_img, gray, img, warped_img, minv, roi_img, thresh, hist, out, rotate_img;
             int ct;
             vector<uchar> encode;
             vector<int> encode_param;
@@ -66,11 +66,14 @@ int main(int argc, char** argv)
             encode_param.push_back(cv::IMWRITE_JPEG_QUALITY);  //jpg format compressing
             encode_param.push_back(20);  //compressed in 20%
 
+            //Color filter
+            filtered_img = color_filter(src);
+
             //Gray scale
-            cv::cvtColor(src, gray, cv::COLOR_BGR2GRAY);
+            cv::cvtColor(filtered_img, gray, cv::COLOR_BGR2GRAY);
 
             //180도 rotation
-            cv::flip(src, rotate_img, -1);
+            cv::flip(gray, rotate_img, -1);
 
             //Fisheye lense calibration
             cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
@@ -113,7 +116,25 @@ int main(int argc, char** argv)
         }
         ros::spinOnce();
     }
+
     return 0;
+}
+
+cv::Mat color_filter(const cv::Mat &image)
+{
+    cv::Mat hsv, v, white, yellow, or_img;
+    cv::Mat yellow_lower = (cv::Mat1d(1, 3) << 5, 90, 100);
+    cv::Mat yellow_upper = (cv::Mat1d(1, 3) << 200, 255, 255);
+    vector<cv::Mat> hsv_split;
+    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+    cv::split(hsv, hsv_split);
+    cv::imshow("value",hsv_split[2]);
+    v = hsv_split[2];
+    cv::inRange(v, 235, 255, white);
+    cv::inRange(hsv, yellow_lower, yellow_upper, yellow);
+    cv::bitwise_or(white, yellow, or_img);
+
+    return or_img;
 }
 
 ret1 warpping(const cv::Mat &image)
@@ -138,6 +159,7 @@ cv::Mat roi(const cv::Mat &image)
     vector<vector<cv::Point2i>> shape = { { {int(0.2 * w), int(h - 200)},{int(0.8 * w), int(h - 200)},{int(0.8 * w), int(h)},{int(0.2 * w), int(h)} } };
     cv::fillPoly(mask, shape, 255);
     cv::bitwise_and(image, mask, masked_img);
+
     return masked_img;
 }
 
@@ -146,6 +168,7 @@ cv::Mat plothistogram(const cv::Mat &image)
     cv::Mat hist;
     for (int i = 0; i < image.cols; i++)
         hist.push_back(cv::sum(image.col(i))[0]);
+
     return hist;
 }
 
@@ -160,30 +183,31 @@ ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &w
     merge(temp, out_img);
     const double *next;
     double max = 0;
-    for (int r = 0; r < hist.rows / 2; r++) {
-        next = hist.ptr<double>(r, 1);
-        if (max < *next) {
-            max = *next;
-            max_left = r;
-        }
-    }
-    max = 0;
-    for (int r = hist.rows / 2; r < hist.rows; r++) {
-        next = hist.ptr<double>(r, 1);
-        if (max < *next) {
-            max = *next;
-            max_right = r;
-        }
-    }
-    if (max_left < 100)
-        max_left = 195;
-    if (max_right < 310)
-        max_right = 415;
 
     for (int wd=0;wd<num;wd++)
     {
         int win_y_top = int(h)-(100*(int(wd)+1));
         int win_y_bottom = int(h)-(100*int(wd));
+
+        for (int r = 0; r < hist.rows / 2; r++) {
+            next = hist.ptr<double>(r, 1);
+            if (max < *next) {
+                max = *next;
+                max_left = r;
+            }
+        }
+        max = 0;
+        for (int r = hist.rows / 2; r < hist.rows; r++) {
+            next = hist.ptr<double>(r, 1);
+            if (max < *next) {
+                max = *next;
+                max_right = r;
+            }
+        }
+        if (max_left < 100)
+            max_left = 195;
+        if (max_right < 310)
+            max_right = 415;
         if(max_left < 150 | max_left > 250)
             max_left = max_right - 230;
         if(max_right < 380 | max_right > 450)
