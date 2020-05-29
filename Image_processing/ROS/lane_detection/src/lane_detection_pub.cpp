@@ -14,6 +14,7 @@ static double ym_per_pix = 30.0 / 480;
 static double xm_per_pix = 3.7 / 480;
 static double h = 480;
 static double w = 640;
+static int center = 0;
 
 typedef struct warpped_ret
 {
@@ -21,18 +22,11 @@ typedef struct warpped_ret
     cv::Mat minverse;
 }ret1;
 
-typedef struct lane_detect
-{
-    cv::Mat out_img;
-    int center = 0;
-}ret2;
-
 //*******FUNCTION**********
 cv::Mat color_filter(const cv::Mat &);
-ret1 warpping(const cv::Mat &image);
-cv::Mat roi(const cv::Mat &image);
-cv::Mat plothistogram(const cv::Mat &);
-ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &warped_img, int num);
+ret1 warpping(const cv::Mat &);
+cv::Mat roi(const cv::Mat &);
+cv::Mat window_roi(const cv::Mat &binary_img, int num);
 //*************************
 
 int main(int argc, char** argv)
@@ -42,14 +36,13 @@ int main(int argc, char** argv)
     ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
     ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
 
-    cv::VideoCapture cap("/home/moon/Downloads/drive_test.avi");
+    cv::VideoCapture cap(0);
 
     cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
     cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
 
     ret1 r1;
-    ret2 r2;
 
     while(nh.ok())
     {
@@ -58,8 +51,7 @@ int main(int argc, char** argv)
 
         if(!src.empty())
         {
-            cv::Mat filtered_img, gray, img, warped_img, minv, roi_img, thresh, hist, out, rotate_img;
-            int ct;
+            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out;
             vector<uchar> encode;
             vector<int> encode_param;
 
@@ -69,11 +61,8 @@ int main(int argc, char** argv)
             //Color filter
             filtered_img = color_filter(src);
 
-            //Gray scale
-            cv::cvtColor(filtered_img, gray, cv::COLOR_BGR2GRAY);
-
             //180도 rotation
-            cv::flip(gray, rotate_img, -1);
+            cv::flip(filtered_img, rotate_img, -1);
 
             //Fisheye lense calibration
             cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
@@ -85,17 +74,9 @@ int main(int argc, char** argv)
 
             //ROI img
             roi_img = roi(warped_img);
-
-            //Threshold
-            cv::threshold(roi_img, thresh, 205, 255, cv::THRESH_BINARY);
-
-            //Histogram
-            hist = plothistogram(thresh);
-
+            
             //Window ROI
-            r2 = window_roi(thresh, hist, warped_img, 1);
-            out = r2.out_img;
-            ct = r2.center;
+            out = window_roi(warped_img, 1);
 
             cv::imshow("result", out);
 
@@ -103,7 +84,7 @@ int main(int argc, char** argv)
 
             std_msgs::UInt8MultiArray msgArray;
             std_msgs::Int32 lane_center;
-            lane_center.data = ct;
+            lane_center.data = center;
             msgArray.data.clear();
             std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
 
@@ -163,55 +144,54 @@ cv::Mat roi(const cv::Mat &image)
     return masked_img;
 }
 
-cv::Mat plothistogram(const cv::Mat &image)
-{
-    cv::Mat hist;
-    for (int i = 0; i < image.cols; i++)
-        hist.push_back(cv::sum(image.col(i))[0]);
-
-    return hist;
-}
-
-ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &warped_img, int num) {
-    ret2 r2;
-    cv::Mat out_img, nonzero, nonzero_x, nonzero_y;
-    //binary_img.copyTo(out_img);
+cv::Mat window_roi(const cv::Mat &binary_img, int num) {
+    cv::Mat out_img, hist, img_cp;
     int max_left = 0, max_right = 0, margin = 30, minpix = 50, thickness = 2;
-    int center;
+    double max_l = 0, max_r = 0;
     cv::Scalar color(0, 255, 0);
     vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
     merge(temp, out_img);
     const double *next;
-    double max = 0;
 
     for (int wd=0;wd<num;wd++)
     {
         int win_y_top = int(h)-(100*(int(wd)+1));
         int win_y_bottom = int(h)-(100*int(wd));
+        
+        cv::Rect rect(0, h-50*(num+1), w, 50);
+        img_cp = binary_img(rect);
+        
+        for (int i = 0; i < binary_img.cols; i++)
+            hist.push_back(cv::sum(binary_img.col(i))[0]);
 
         for (int r = 0; r < hist.rows / 2; r++) {
             next = hist.ptr<double>(r, 1);
-            if (max < *next) {
-                max = *next;
+            if (max_l < *next) {
+                max_l = *next;
                 max_left = r;
             }
         }
-        max = 0;
         for (int r = hist.rows / 2; r < hist.rows; r++) {
             next = hist.ptr<double>(r, 1);
-            if (max < *next) {
-                max = *next;
+            if (max_r < *next) {
+                max_r = *next;
                 max_right = r;
             }
         }
-        if (max_left < 100)
-            max_left = 195;
-        if (max_right < 310)
-            max_right = 415;
-        if(max_left < 150 | max_left > 250)
+        
+        if(max_left < 70)
+        	max_left = 210;
+		if(max_right > 600)
+            max_right = 425;
+        if(max_left < 170)
             max_left = max_right - 230;
-        if(max_right < 380 | max_right > 450)
+        if(max_left > 260)
+            max_left = max_right - 230;
+        if(max_right < 400)
             max_right = max_left + 230;
+        if(max_right > 460)
+            max_right = max_left + 230;
+        
         int win_xleft_top = max_left - margin;
         int win_xleft_bottom = max_left + margin;
         int win_xright_top = max_right - margin;
@@ -223,9 +203,7 @@ ret2 window_roi(const cv::Mat &binary_img, const cv::Mat &hist, const cv::Mat &w
     }
 
     center = (max_left + max_right) / 2;
-    r2.out_img = out_img;
-    r2.center = center;
 
-    return r2;
+    return out_img;
 }
 
