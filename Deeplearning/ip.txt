@@ -1,3 +1,0 @@
-문예리 - 112(raspberry pi 3), 117(Raspberry pi 4), 118(Jetson nano), 119(Server PC), 120(Window PC)
-김주성 - 101~105
-이명상 - 
