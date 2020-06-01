@@ -1,1 +1,0 @@
-/usr/bin/c++ -fPIC -g  -shared -Wl,-soname,libgtest.so -o libgtest.so CMakeFiles/gtest.dir/src/gtest-all.cc.o   -L/home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug/gtest/googlemock/gtest/src  -Wl,-rpath,/home/moon/bit_automation_driving/Image_processing/ROS/lane_detection/cmake-build-debug/gtest/googlemock/gtest/src -lpthread 

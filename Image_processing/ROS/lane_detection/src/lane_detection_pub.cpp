@@ -86,6 +86,7 @@ int main(int argc, char** argv)
             std_msgs::Int32 lane_center;
             lane_center.data = center;
             msgArray.data.clear();
+            msgArray.data.resize(encode.size());
             std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
 
             img_pub.publish(msgArray);
@@ -109,9 +110,8 @@ cv::Mat color_filter(const cv::Mat &image)
     vector<cv::Mat> hsv_split;
     cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
     cv::split(hsv, hsv_split);
-    cv::imshow("value",hsv_split[2]);
     v = hsv_split[2];
-    cv::inRange(v, 235, 255, white);
+    cv::inRange(v, 250, 255, white);
     cv::inRange(hsv, yellow_lower, yellow_upper, yellow);
     cv::bitwise_or(white, yellow, or_img);
 
@@ -137,7 +137,7 @@ cv::Mat roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
-    vector<vector<cv::Point2i>> shape = { { {int(0.2 * w), int(h - 200)},{int(0.8 * w), int(h - 200)},{int(0.8 * w), int(h)},{int(0.2 * w), int(h)} } };
+    vector<vector<cv::Point2i>> shape = { { {int(0.3 * w), int(h - 200)},{int(0.6 * w), int(h - 200)},{int(0.6 * w), int(h)},{int(0.3 * w), int(h)} } };
     cv::fillPoly(mask, shape, 255);
     cv::bitwise_and(image, mask, masked_img);
 
@@ -146,7 +146,7 @@ cv::Mat roi(const cv::Mat &image)
 
 cv::Mat window_roi(const cv::Mat &binary_img, int num) {
     cv::Mat out_img, hist, img_cp;
-    int max_left = 0, max_right = 0, margin = 30, minpix = 50, thickness = 2;
+    int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
     double max_l = 0, max_r = 0;
     cv::Scalar color(0, 255, 0);
     vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
@@ -155,14 +155,15 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
 
     for (int wd=0;wd<num;wd++)
     {
-        int win_y_top = int(h)-(100*(int(wd)+1));
-        int win_y_bottom = int(h)-(100*int(wd));
+        int win_y_top = int(h)-(150*(int(wd)+1));
+        int win_y_bottom = win_y_top + 50;
         
-        cv::Rect rect(0, h-50*(num+1), w, 50);
+        cv::Rect rect(0, h-150*(wd+1), w, 50);
         img_cp = binary_img(rect);
+        cv::imshow("cut", img_cp);
         
-        for (int i = 0; i < binary_img.cols; i++)
-            hist.push_back(cv::sum(binary_img.col(i))[0]);
+        for (int i = 0; i < img_cp.cols; i++)
+            hist.push_back(cv::sum(img_cp.col(i))[0]);
 
         for (int r = 0; r < hist.rows / 2; r++) {
             next = hist.ptr<double>(r, 1);
@@ -178,31 +179,38 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
                 max_right = r;
             }
         }
+        if(max_left > 100 | max_right <= binary_img.cols / 2){
+            max = max_left;
+        }
         
-        if(max_left < 70)
-        	max_left = 210;
-		if(max_right > 600)
+        else if(max_left < 50){
+        	max = max_right - 210;
+        }
+        else if(max_left < 50 & max_right <= binary_img.cols / 2)
+            max = 225;
+            /*
+		if(max_right > 650)
             max_right = 425;
         if(max_left < 170)
-            max_left = max_right - 230;
-        if(max_left > 260)
-            max_left = max_right - 230;
+            max_left = max_right - 240;
+        if(max_left > 270)
+            max_left = max_right - 240;
         if(max_right < 400)
-            max_right = max_left + 230;
-        if(max_right > 460)
-            max_right = max_left + 230;
+            max_right = max_left + 240;
+        if(max_right > 500)
+            max_right = max_left + 240;*/
         
-        int win_xleft_top = max_left - margin;
-        int win_xleft_bottom = max_left + margin;
-        int win_xright_top = max_right - margin;
-        int win_xright_bottom = max_right + margin;
+        int win_xleft_top = max - margin;
+        int win_xleft_bottom = max + margin;
+        int win_xright_top = max + 210 - margin;
+        int win_xright_bottom = max + 210 + margin;
 
         cv::rectangle(out_img, cv::Point(win_xleft_top, win_y_top), cv::Point(win_xleft_bottom, win_y_bottom), color, thickness);
         cv::rectangle(out_img, cv::Point(win_xright_top, win_y_top), cv::Point(win_xright_bottom, win_y_bottom), color, thickness);
 
     }
 
-    center = (max_left + max_right) / 2;
+    center = max_left + 105;
 
     return out_img;
 }
