@@ -54,7 +54,8 @@ $ git push origin master
 ###### 문예리
 * turtlebot3 자율 주행 급커브 구간, 교차로 부분
 ###### 김주성
-* 통신프로토콜 정의
+* ~~통신프로토콜 정의~~
+* (https://docs.google.com/spreadsheets/d/1V3kwCB1-sf4snZoHFhuVJ2KaiuuYI1dZ3ldLN3p4mmc/edit?usp=sharing)
 * qt 
 ###### 이명상
 *
