@@ -68,5 +68,7 @@ $ git push origin master
 * 정지선 인식 코드
 * 차선인식 + PID / 코스 운영 + 차선인식 + PID + 주차
 ###### 이명상
-*
+* D435i Camera RGB, Depth Image 싱크 맞추기
+* 새로운 Datasets 만들기
+* 객체 인식 정보 Publish 코드
 ***
