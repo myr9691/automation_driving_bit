@@ -81,14 +81,14 @@ int main(int argc, char** argv)
 
             cv::imshow("result", out);
 
-            cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
+            //cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
 
-            std_msgs::UInt8MultiArray msgArray;
+            //std_msgs::UInt8MultiArray msgArray;
             std_msgs::Int32 lane_center;
             lane_center.data = center;
-            msgArray.data.clear();
-            msgArray.data.resize(encode.size());
-            std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
+            //msgArray.data.clear();
+            //msgArray.data.resize(encode.size());
+            //std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
 
             //img_pub.publish(msgArray);
             center_pub.publish(lane_center);
@@ -162,10 +162,10 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
         cv::Mat hist;
         double max_l = 0, max_r = 0;
         max_left = 0; max_right = 0; max = 0;
-        int win_y_top = int(h)-(50*(wd+1));
-        int win_y_bottom = win_y_top + 50;
+        int win_y_top = int(h)-(40*(wd+1));
+        int win_y_bottom = win_y_top + 40;
         
-        cv::Rect rect(0, h-50*(wd+1), w, 50);
+        cv::Rect rect(0, h-40*(wd+1), w, 40);
         img_cp = binary_img(rect);
         
         for (int i = 0; i < img_cp.cols; i++)
@@ -192,27 +192,50 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
         max_wleft.push_back(max_left);
         max_wright.push_back(max_right);
         
-        int win_lt = max_left - margin;
-        int win_lb = max_left + margin;
-        int win_rt = max_right - margin;
-        int win_rb = max_right + margin;
-        cv::rectangle(out_img, cv::Point(win_lt, win_y_top), cv::Point(win_lb, win_y_bottom), left_color, thickness);
-        cv::rectangle(out_img, cv::Point(win_rt, win_y_top), cv::Point(win_rb, win_y_bottom), right_color, thickness);
-       
+        if (wd < 3)
+        {
+            int win_lt = max_left - margin;
+            int win_lb = max_left + margin;
+            int win_rt = max_right - margin;
+            int win_rb = max_right + margin;
+            cv::rectangle(out_img, cv::Point(win_lt, win_y_top), cv::Point(win_lb, win_y_bottom), left_color, thickness);
+            cv::rectangle(out_img, cv::Point(win_rt, win_y_top), cv::Point(win_rb, win_y_bottom), right_color, thickness);
+        }
     }
     
     //우회전 (왼쪽 선 참조)
     if (max_wleft[1] - max_wleft[0] > 0)
     {
-        max = max_wleft[2];
-        center = max + 105;
+        cout << "LEFT LINE" << endl;
+        if (max_wleft[3] > 0)
+            max = max_wleft[3];
+        else
+            max = max_wleft[2];
+        center = max + 102;
+        cout << center << endl;
     }
     
     //좌회전 (오른쪽 선 참조)
+    else if (max_wright[0] - max_wright[1] > 0)
+    {
+        cout << "RIGHT LINE" << endl;
+        if (max_wright[3] > 0)
+            max = max_wright[3];
+        else
+            max = max_wright[2];
+        center = max - 102;
+        cout << center << endl;
+    }
+    
     else
     {
-        max = max_wright[2];
-        center = max - 105;
+        cout << "LEFT LINE " <<endl;
+        if (max_wleft[3] > 0)
+            max = max_wleft[3];
+        else
+            max = max_wleft[2];
+        center = max + 102;
+        cout << center << endl;
     }
 
     return out_img;

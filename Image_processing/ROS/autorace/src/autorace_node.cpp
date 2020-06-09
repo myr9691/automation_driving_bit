@@ -44,24 +44,21 @@ void ControlLane::publish_CMD_VEL(ros::Publisher *cmd_vel)
 {
 	geometry_msgs::Twist twist;
 	
-	int error = center - 330;
+	int error = center - 327;
 	
 	float Kp = 0.0025;
 	float Kd = 0.02;
 	
 	float angular_z = Kp * error + Kd * (error - lastError);
-	float angle = 0.5;
+	float angle = 0.8;
 	
 	lastError = error;
-	twist.linear.x = std::min(MAX_VEL * pow(1 - abs(error) / 330, 2.2), 0.2);
+	twist.linear.x = std::min(MAX_VEL * pow(1 - abs(error) / 327, 2.2), 0.2);
 	twist.linear.y = 0;
 	twist.linear.z = 0;
 	twist.angular.x = 0;
 	twist.angular.y = 0;
-	if (angular_z < 0)
-		twist.angular.z = std::max(angular_z, -angle);
-	else
-		twist.angular.z = -std::min(angular_z, angle);
+	twist.angular.z = angular_z < 0 ? -std::max(angular_z, -angle) : -std::min(angular_z, angle);
 	
 	cmd_vel -> publish(twist);
 }
@@ -80,10 +77,14 @@ int main(int argc, char** argv)
 
 	ros::Rate loop_rate(10);
 	
-	controlane -> publish_CMD_VEL(&pub_cmd_vel);
-	ros::spin();
-
-
+	while(nh.ok())
+	{
+		controlane -> publish_CMD_VEL(&pub_cmd_vel);
+		
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+	
 	return 0;
 }
 
@@ -94,55 +95,45 @@ int main(int argc, char** argv)
 #include <stdlib.h>
 
 void cbFollowLane(const std_msgs::Int32::ConstPtr& desired_center);
-geometry_msgs::Twist twist;
 ros::Publisher pub_cmd_vel;
-
+ros::Subscriber sub_lane;
 int lastError = 0;
-float MAX_VEL = 0.05;
-int center = 0;
-int error = 0;
-float Kp = 0.0025;
-float Kd = 0.02;
-float angle = 0.5;
-float angular_z = 0;
+
 
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "control_lane");
 	ros::NodeHandle nh;
-	ros::Subscriber sub_lane = nh.subscribe<std_msgs::Int32>("pi/lane", 1, cbFollowLane);
 	pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+	sub_lane = nh.subscribe<std_msgs::Int32>("pi/lane", 1, cbFollowLane);
 	
-	twist.linear.y = 0;
-	twist.linear.z = 0;
-	twist.angular.x = 0;
-	twist.angular.y = 0;
-	
-	ros::Rate loop_rate(10);
-	while(ros::ok())
-	{
-		twist.linear.x = std::min(MAX_VEL * pow(1 - abs(error) / 330, 2.2), 0.2);
-	
-		if (angular_z < 0)
-			twist.angular.z = std::max(angular_z, -angle);
-		else
-			twist.angular.z = -std::min(angular_z, angle);
-		pub_cmd_vel.publish(twist);
-		
-		ros::spinOnce();
-		loop_rate.sleep();
-	}
-	
+	ros::spin();
 	
 	return 0;
 }
 
 void cbFollowLane(const std_msgs::Int32::ConstPtr& desired_center)
 {
-	center = desired_center->data;
-	error = center - 330;
+	geometry_msgs::Twist twist;
 	
-	angular_z = Kp * error + Kd * (error - lastError);
+	float MAX_VEL = 0.05;
 	
+	int center = desired_center->data;
+	int error = center - 330;
+	
+	float Kp = 0.0025;
+	float Kd = 0.02;
+	
+	float angular_z = Kp * error + Kd * (error - lastError);
 	lastError = error;
+	
+	float angle = 0.5;
+	
+	twist.linear.x = std::min(MAX_VEL * pow(1 - abs(error) / 330, 2.2), 0.2);
+	twist.linear.y = 0;
+	twist.linear.z = 0;
+	twist.angular.x = 0;
+	twist.angular.y = 0;
+	twist.angular.z = angular_z < 0 ? -std::max(angular_z, -angle) : -std::min(angular_z, angle);
+	pub_cmd_vel.publish(twist);
 }*/
