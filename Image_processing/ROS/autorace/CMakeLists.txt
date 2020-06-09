@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(vl53l0x_parking)
+project(autorace)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -9,11 +9,8 @@ project(vl53l0x_parking)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
-  message_generation
   roscpp
-  sensor_msgs
   std_msgs
-  turtlebot3_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -73,7 +70,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
-  geometry_msgs   sensor_msgs   std_msgs   turtlebot3_msgs
+  geometry_msgs   std_msgs
 )
 
 ################################################
@@ -107,9 +104,8 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES vl53l0x_parking
-#  CATKIN_DEPENDS geometry_msgs message_generation roscpp sensor_msgs std_msgs turtlebot3_msgs
-	CATKIN_DEPENDS message_runtime
+ LIBRARIES autorace
+ CATKIN_DEPENDS geometry_msgs roscpp std_msgs
 #  DEPENDS system_lib
 )
 
@@ -121,13 +117,12 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-	src
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/vl53l0x_parking.cpp
+#   src/${PROJECT_NAME}/autorace.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -138,11 +133,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node 
-	src/vl53l0x_parking.cpp
-  src/tof.cpp)
-
-add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_generate_messages_cpp)
+add_executable(autorace src/autorace_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -152,12 +143,11 @@ add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(autorace ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_node
-  ${catkin_LIBRARIES}
-  -lwiringPi
+target_link_libraries(autorace
+   ${catkin_LIBRARIES}
 )
 
 #############
@@ -207,7 +197,7 @@ target_link_libraries(${PROJECT_NAME}_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_vl53l0x_parking.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_autorace.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

@@ -47,6 +47,7 @@ int main(int argc, char** argv)
     while(nh.ok())
     {
         cv::Mat src;
+        
         cap.read(src);
 
         if(!src.empty())
@@ -76,7 +77,7 @@ int main(int argc, char** argv)
             roi_img = roi(warped_img);
             
             //Window ROI
-            out = window_roi(warped_img, 1);
+            out = window_roi(roi_img, 4);
 
             cv::imshow("result", out);
 
@@ -89,7 +90,7 @@ int main(int argc, char** argv)
             msgArray.data.resize(encode.size());
             std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
 
-            img_pub.publish(msgArray);
+            //img_pub.publish(msgArray);
             center_pub.publish(lane_center);
 
             int key = cv::waitKey(2);
@@ -111,9 +112,11 @@ cv::Mat color_filter(const cv::Mat &image)
     cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
     cv::split(hsv, hsv_split);
     v = hsv_split[2];
-    cv::inRange(v, 250, 255, white);
+    cv::inRange(v, 245, 255, white);
     cv::inRange(hsv, yellow_lower, yellow_upper, yellow);
     cv::bitwise_or(white, yellow, or_img);
+    cv::flip(yellow, yellow, -1);
+    cv::flip(white, white, -1);
 
     return or_img;
 }
@@ -122,8 +125,8 @@ ret1 warpping(const cv::Mat &image)
 {
     ret1 r;
     cv::Mat w_img, transform_matrix, minv;
-    vector<cv::Point2f> source = {cv::Point2f(0.4 * w, 0.4 * h), cv::Point2f(0.6 * w, 0.4 * h), cv::Point2f(0.0, h), cv::Point2f(w, h)};
-    vector<cv::Point2f> destination = {cv::Point2f(0.27 * w, 0), cv::Point2f(0.67 * w, 0), cv::Point2f(0.27 * w, h), cv::Point2f(0.73 * w, h)};
+    vector<cv::Point2f> source = {cv::Point2f(0.4 * w, 0.45 * h), cv::Point2f(0.6 * w, 0.45 * h), cv::Point2f(0.0, h), cv::Point2f(w, h)};
+    vector<cv::Point2f> destination = {cv::Point2f(0.27 * w, 0), cv::Point2f(0.65 * w, 0), cv::Point2f(0.27 * w, h), cv::Point2f(0.73 * w, h)};
     transform_matrix = cv::getPerspectiveTransform(source, destination);
     minv = cv::getPerspectiveTransform(destination, source);
     cv::warpPerspective(image, w_img, transform_matrix, cv::Size(w, h));
@@ -137,7 +140,7 @@ cv::Mat roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
-    vector<vector<cv::Point2i>> shape = { { {int(0.3 * w), int(h - 200)},{int(0.6 * w), int(h - 200)},{int(0.6 * w), int(h)},{int(0.3 * w), int(h)} } };
+    vector<vector<cv::Point2i>> shape = { { {0, 0},{int(w) - 100, 0},{int(w) - 100, int(h)},{0, int(h)} } };
     cv::fillPoly(mask, shape, 255);
     cv::bitwise_and(image, mask, masked_img);
 
@@ -145,72 +148,72 @@ cv::Mat roi(const cv::Mat &image)
 }
 
 cv::Mat window_roi(const cv::Mat &binary_img, int num) {
-    cv::Mat out_img, hist, img_cp;
+    cv::Mat out_img, img_cp;
+    vector<int> max_wleft, max_wright;
     int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
-    double max_l = 0, max_r = 0;
-    cv::Scalar color(0, 255, 0);
+    cv::Scalar left_color(255, 0, 0);
+    cv::Scalar right_color(0, 0, 255);
     vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
     merge(temp, out_img);
     const double *next;
 
     for (int wd=0;wd<num;wd++)
     {
-        int win_y_top = int(h)-(150*(int(wd)+1));
+        cv::Mat hist;
+        double max_l = 0, max_r = 0;
+        max_left = 0; max_right = 0; max = 0;
+        int win_y_top = int(h)-(50*(wd+1));
         int win_y_bottom = win_y_top + 50;
         
-        cv::Rect rect(0, h-150*(wd+1), w, 50);
+        cv::Rect rect(0, h-50*(wd+1), w, 50);
         img_cp = binary_img(rect);
-        cv::imshow("cut", img_cp);
         
         for (int i = 0; i < img_cp.cols; i++)
             hist.push_back(cv::sum(img_cp.col(i))[0]);
 
-        for (int r = 0; r < hist.rows / 2; r++) {
+        for (int r = 0; r < hist.rows/2; r++) 
+        {
             next = hist.ptr<double>(r, 1);
             if (max_l < *next) {
                 max_l = *next;
                 max_left = r;
             }
         }
-        for (int r = hist.rows / 2; r < hist.rows; r++) {
+        
+        for (int r = hist.rows/2; r < hist.rows; r++) 
+        {
             next = hist.ptr<double>(r, 1);
             if (max_r < *next) {
                 max_r = *next;
                 max_right = r;
             }
         }
-        if(max_left > 100 | max_right <= binary_img.cols / 2){
-            max = max_left;
-        }
         
-        else if(max_left < 50){
-        	max = max_right - 210;
-        }
-        else if(max_left < 50 & max_right <= binary_img.cols / 2)
-            max = 225;
-            /*
-		if(max_right > 650)
-            max_right = 425;
-        if(max_left < 170)
-            max_left = max_right - 240;
-        if(max_left > 270)
-            max_left = max_right - 240;
-        if(max_right < 400)
-            max_right = max_left + 240;
-        if(max_right > 500)
-            max_right = max_left + 240;*/
+        max_wleft.push_back(max_left);
+        max_wright.push_back(max_right);
         
-        int win_xleft_top = max - margin;
-        int win_xleft_bottom = max + margin;
-        int win_xright_top = max + 210 - margin;
-        int win_xright_bottom = max + 210 + margin;
-
-        cv::rectangle(out_img, cv::Point(win_xleft_top, win_y_top), cv::Point(win_xleft_bottom, win_y_bottom), color, thickness);
-        cv::rectangle(out_img, cv::Point(win_xright_top, win_y_top), cv::Point(win_xright_bottom, win_y_bottom), color, thickness);
-
+        int win_lt = max_left - margin;
+        int win_lb = max_left + margin;
+        int win_rt = max_right - margin;
+        int win_rb = max_right + margin;
+        cv::rectangle(out_img, cv::Point(win_lt, win_y_top), cv::Point(win_lb, win_y_bottom), left_color, thickness);
+        cv::rectangle(out_img, cv::Point(win_rt, win_y_top), cv::Point(win_rb, win_y_bottom), right_color, thickness);
+       
     }
-
-    center = max_left + 105;
+    
+    //우회전 (왼쪽 선 참조)
+    if (max_wleft[1] - max_wleft[0] > 0)
+    {
+        max = max_wleft[2];
+        center = max + 105;
+    }
+    
+    //좌회전 (오른쪽 선 참조)
+    else
+    {
+        max = max_wright[2];
+        center = max - 105;
+    }
 
     return out_img;
 }
