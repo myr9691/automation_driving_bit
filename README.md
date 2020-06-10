@@ -68,7 +68,7 @@ $ git push origin master
 * ~~커브길 차선 인식 코드~~
 * ~~코스 운영 코드, 속도 제어, sub 코드~~
 * ~~정지선 인식 코드~~
-* c++ code Class로 
+* ~~c++ code Class로~~
 * 차선인식 + PID / 코스 운영 + 차선인식 + PID + 주차
 ###### 이명상
 * D435i Camera RGB, Depth Image 싱크 맞추기
