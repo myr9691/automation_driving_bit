@@ -10,8 +10,6 @@
 
 using namespace std;
 
-static double ym_per_pix = 30.0 / 480;
-static double xm_per_pix = 3.7 / 480;
 static double h = 480;
 static double w = 640;
 static int center = 0;
@@ -27,6 +25,7 @@ cv::Mat color_filter(const cv::Mat &);
 ret1 warpping(const cv::Mat &);
 cv::Mat roi(const cv::Mat &);
 cv::Mat window_roi(const cv::Mat &binary_img, int num);
+int stop_line(const cv::Mat &binary_img);
 //*************************
 
 int main(int argc, char** argv)
@@ -35,6 +34,7 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
     ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
+    ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
     cv::VideoCapture cap(0);
 
@@ -78,7 +78,16 @@ int main(int argc, char** argv)
             
             //Window ROI
             out = window_roi(roi_img, 4);
-
+            
+            std_msgs::Int32 stop;
+            
+            //Find Stop Line
+            stop.data = stop_line(roi_img);
+            if (stop.data)
+            {
+                stop_pub.publish(stop);
+            }
+        
             cv::imshow("result", out);
 
             //cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
@@ -148,13 +157,11 @@ cv::Mat roi(const cv::Mat &image)
 }
 
 cv::Mat window_roi(const cv::Mat &binary_img, int num) {
-    cv::Mat out_img, img_cp;
+    cv::Mat out_img = binary_img.clone(), img_cp;
     vector<int> max_wleft, max_wright;
     int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
     cv::Scalar left_color(255, 0, 0);
     cv::Scalar right_color(0, 0, 255);
-    vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
-    merge(temp, out_img);
     const double *next;
 
     for (int wd=0;wd<num;wd++)
@@ -240,4 +247,31 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
 
     return out_img;
 }
+
+int stop_line(const cv::Mat &binary_img)
+{
+    int horiz_size, stop = 0;
+    cv::Mat hist, img_cp, horizontal, horizontal_img;
+    
+    cv::Rect rect(0, h-40, w, 40);
+    img_cp = binary_img(rect);
+    horizontal = img_cp.clone();
+    
+    horiz_size = img_cp.cols/20;
+    
+    horizontal_img = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(horiz_size, 1));
+    cv::erode(horizontal, horizontal, horizontal_img, cv::Point(-1, -1));
+    cv::dilate(horizontal, horizontal, horizontal_img, cv::Point(-1, -1));
+    
+    for (int i = 0; i < horizontal.cols; i++)
+        hist.push_back(cv::sum(img_cp.col(i))[0]);
+    if(*hist.ptr<double>(hist.rows/2, 1) > 20)
+        stop = 1;
+    
+    cv::imshow("horizontal", horizontal);
+    
+    return stop;
+}
+
+
 
