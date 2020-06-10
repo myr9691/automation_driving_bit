@@ -10,109 +10,41 @@
 
 using namespace std;
 
-static double h = 480;
-static double w = 640;
-static int center = 0;
-
-typedef struct warpped_ret
+class LANE_DETECTION
 {
-    cv::Mat w_img;
-    cv::Mat minverse;
-}ret1;
-
-//*******FUNCTION**********
-cv::Mat color_filter(const cv::Mat &);
-ret1 warpping(const cv::Mat &);
-cv::Mat roi(const cv::Mat &);
-cv::Mat window_roi(const cv::Mat &binary_img, int num);
-int stop_line(const cv::Mat &binary_img);
-//*************************
-
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "lane_detect");
-    ros::NodeHandle nh;
-    ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
-    ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
-    ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
-
-    cv::VideoCapture cap(0);
-
-    cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
-    cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
-    cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
-
-    ret1 r1;
-
-    while(nh.ok())
-    {
-        cv::Mat src;
+    public:
+        //생성자
+        LANE_DETECTION();
+        //소멸자 
+        ~LANE_DETECTION();
         
-        cap.read(src);
-
-        if(!src.empty())
+        typedef struct warpped_ret
         {
-            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out;
-            vector<uchar> encode;
-            vector<int> encode_param;
-
-            encode_param.push_back(cv::IMWRITE_JPEG_QUALITY);  //jpg format compressing
-            encode_param.push_back(20);  //compressed in 20%
-
-            //Color filter
-            filtered_img = color_filter(src);
-
-            //180도 rotation
-            cv::flip(filtered_img, rotate_img, -1);
-
-            //Fisheye lense calibration
-            cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
-
-            //Warpped img
-            r1 = warpping(img);
-            warped_img = r1.w_img;
-            minv = r1.minverse;
-
-            //ROI img
-            roi_img = roi(warped_img);
-            
-            //Window ROI
-            out = window_roi(roi_img, 4);
-            
-            std_msgs::Int32 stop;
-            
-            //Find Stop Line
-            stop.data = stop_line(roi_img);
-            if (stop.data)
-            {
-                stop_pub.publish(stop);
-            }
+            cv::Mat w_img;
+            cv::Mat minverse;
+        }ret1;
         
-            cv::imshow("result", out);
+        //FUNCTION
+        cv::Mat color_filter(const cv::Mat &);
+        ret1 warpping(const cv::Mat &);
+        cv::Mat roi(const cv::Mat &);
+        cv::Mat window_roi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub);
+        void stop_line(const cv::Mat &binary_img, ros::Publisher *stop_pub);
+        
+    private:
+        double h;
+        double w;
+};
 
-            //cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
-
-            //std_msgs::UInt8MultiArray msgArray;
-            std_msgs::Int32 lane_center;
-            lane_center.data = center;
-            //msgArray.data.clear();
-            //msgArray.data.resize(encode.size());
-            //std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
-
-            //img_pub.publish(msgArray);
-            center_pub.publish(lane_center);
-
-            int key = cv::waitKey(2);
-            if(key == 27)
-                break;
-        }
-        ros::spinOnce();
-    }
-
-    return 0;
+LANE_DETECTION::LANE_DETECTION() : h(480), w(640)
+{
 }
 
-cv::Mat color_filter(const cv::Mat &image)
+LANE_DETECTION::~LANE_DETECTION()
+{
+}
+
+cv::Mat LANE_DETECTION::color_filter(const cv::Mat &image)
 {
     cv::Mat hsv, v, white, yellow, or_img;
     cv::Mat yellow_lower = (cv::Mat1d(1, 3) << 5, 90, 100);
@@ -130,7 +62,7 @@ cv::Mat color_filter(const cv::Mat &image)
     return or_img;
 }
 
-ret1 warpping(const cv::Mat &image)
+LANE_DETECTION::ret1 LANE_DETECTION::warpping(const cv::Mat &image)
 {
     ret1 r;
     cv::Mat w_img, transform_matrix, minv;
@@ -145,7 +77,7 @@ ret1 warpping(const cv::Mat &image)
     return r;
 }
 
-cv::Mat roi(const cv::Mat &image)
+cv::Mat LANE_DETECTION::roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
@@ -156,7 +88,8 @@ cv::Mat roi(const cv::Mat &image)
     return masked_img;
 }
 
-cv::Mat window_roi(const cv::Mat &binary_img, int num) {
+cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) {
+    std_msgs::Int32 center;
     cv::Mat out_img = binary_img.clone(), img_cp;
     vector<int> max_wleft, max_wright;
     int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
@@ -218,8 +151,8 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
             max = max_wleft[3];
         else
             max = max_wleft[2];
-        center = max + 102;
-        cout << center << endl;
+        center.data = max + 102;
+        cout << center.data << endl;
     }
     
     //좌회전 (오른쪽 선 참조)
@@ -230,8 +163,8 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
             max = max_wright[3];
         else
             max = max_wright[2];
-        center = max - 102;
-        cout << center << endl;
+        center.data = max - 102;
+        cout << center.data << endl;
     }
     
     else
@@ -241,19 +174,23 @@ cv::Mat window_roi(const cv::Mat &binary_img, int num) {
             max = max_wleft[3];
         else
             max = max_wleft[2];
-        center = max + 102;
-        cout << center << endl;
+        center.data = max + 102;
+        cout << center.data << endl;
     }
+    
+    center_pub -> publish(center);
 
     return out_img;
 }
 
-int stop_line(const cv::Mat &binary_img)
+void LANE_DETECTION::stop_line(const cv::Mat &binary_img, ros::Publisher *stop_pub)
 {
-    int horiz_size, stop = 0;
+    std_msgs::Int32 stop;
+    stop.data = 0;
+    int horiz_size;
     cv::Mat hist, img_cp, horizontal, horizontal_img;
     
-    cv::Rect rect(0, h-40, w, 40);
+    cv::Rect rect(0, h-80, w, 80);
     img_cp = binary_img(rect);
     horizontal = img_cp.clone();
     
@@ -266,12 +203,84 @@ int stop_line(const cv::Mat &binary_img)
     for (int i = 0; i < horizontal.cols; i++)
         hist.push_back(cv::sum(img_cp.col(i))[0]);
     if(*hist.ptr<double>(hist.rows/2, 1) > 20)
-        stop = 1;
+        stop.data = 1;
     
-    cv::imshow("horizontal", horizontal);
-    
-    return stop;
+    if (stop.data)
+        stop_pub -> publish(stop);
 }
 
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "lane_detect");
+    ros::NodeHandle nh;
+    ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
+    ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
+    ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
+    cv::VideoCapture cap(0);
 
+    cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
+    cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
+    cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
+
+    LANE_DETECTION *lane_detection = new LANE_DETECTION();
+    
+    //std_msgs::UInt8MultiArray msgArray;
+    
+    LANE_DETECTION::ret1 r1;
+
+    while(nh.ok())
+    {
+        cv::Mat src;
+        
+        cap.read(src);
+
+        if(!src.empty())
+        {
+            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out;
+            vector<uchar> encode;
+            vector<int> encode_param;
+
+            encode_param.push_back(cv::IMWRITE_JPEG_QUALITY);  //jpg format compressing
+            encode_param.push_back(20);  //compressed in 20%
+
+            //Color filter
+            filtered_img = lane_detection -> color_filter(src);
+
+            //180도 rotation
+            cv::flip(filtered_img, rotate_img, -1);
+
+            //Fisheye lense calibration
+            cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
+
+            //Warpped img
+            r1 = lane_detection -> warpping(img);
+            warped_img = r1.w_img;
+            minv = r1.minverse;
+
+            //ROI img
+            roi_img = lane_detection -> roi(warped_img);
+            
+            //Window ROI
+            out = lane_detection -> window_roi(roi_img, 4, &center_pub);
+            
+            //Find Stop Line
+            lane_detection -> stop_line(roi_img, &stop_pub);
+        
+            cv::imshow("result", out);
+
+            //cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
+            //msgArray.data.clear();
+            //msgArray.data.resize(encode.size());
+            //std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
+            //img_pub.publish(msgArray);
+
+            int key = cv::waitKey(2);
+            if(key == 27)
+                break;
+        }
+        ros::spinOnce();
+    }
+
+    return 0;
+}

@@ -41,21 +41,42 @@ unordered_map<string, int> statement = {
 	{"avoid_left", avoid_left}
 };
 
-string state;
+class Course
+{
+	public :
+		Course();
+		~Course();
+		
+		string state;
+		int stop;
+		int count;
+		
+		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
+		void stopCallback(const std_msgs::Int32::ConstPtr& stop_state);
+		void publish_MAX_VEL(ros::Publisher *velocity);
+};
 
-void stateCallback(const std_msgs::String::ConstPtr& nano_state)
+Course::Course() : count(0)
+{
+}
+
+Course::~Course()
+{
+}
+
+void Course::stateCallback(const std_msgs::String::ConstPtr& nano_state)
 {
 	state = nano_state->data.c_str();
 }
 
-int main(int argc, char** argv)
+void Course::stopCallback(const std_msgs::Int32::ConstPtr& stop_state)
 {
-	ros::init(argc, argv, "course_control");
-	ros::NodeHandle nh;
-	
-	ros::Subscriber sub_state = nh.subscribe<std_msgs::String>("nano/state", 1, stateCallback);
-	ros::Publisher pub_MAX_VEL = nh.advertise<std_msgs::Float32>("pi/MAX_VEL", 1);
-	
+	stop = stop_state->data;
+	count ++;
+}
+
+void Course::publish_MAX_VEL(ros::Publisher *velocity)
+{
 	std_msgs::Float32 MAX_VEL;
 	enum Statement STATE;
 	
@@ -87,11 +108,31 @@ int main(int argc, char** argv)
 			break;
 	}
 	
+	if (count < 5)
+	{
+		MAX_VEL.data = 0.0;
+	}
+	
+	velocity -> publish(MAX_VEL);
+	
+}
+
+int main(int argc, char** argv)
+{
+	ros::init(argc, argv, "course_control");
+	ros::NodeHandle nh;
+	
+	Course *course = new Course();
+	
+	ros::Subscriber sub_state = nh.subscribe<std_msgs::String>("nano/state", 1, &Course::stateCallback, course);
+	ros::Subscriber sub_stop = nh.subscribe<std_msgs::Int32>("pi/stop", 1, &Course::stopCallback, course);
+	ros::Publisher pub_MAX_VEL = nh.advertise<std_msgs::Float32>("pi/MAX_VEL", 1);
+	
 	ros::Rate loop_rate(10);
 	
 	while(nh.ok())
 	{
-		pub_MAX_VEL.publish(MAX_VEL);
+		course -> publish_MAX_VEL(&pub_MAX_VEL);
 		ros::spinOnce();
 		loop_rate.sleep();
 	}
