@@ -7,6 +7,7 @@
 #include <std_msgs/UInt8MultiArray.h>
 #include <std_msgs/Int32.h>
 #include <vector>
+#include <time.h>
 
 using namespace std;
 
@@ -146,7 +147,7 @@ cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publ
     //우회전 (왼쪽 선 참조)
     if (max_wleft[1] - max_wleft[0] > 0)
     {
-        cout << "LEFT LINE" << endl;
+        //cout << "LEFT LINE" << endl;
         if (max_wleft[3] > 0)
             max = max_wleft[3];
         else
@@ -158,7 +159,7 @@ cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publ
     //좌회전 (오른쪽 선 참조)
     else if (max_wright[0] - max_wright[1] > 0)
     {
-        cout << "RIGHT LINE" << endl;
+        //cout << "RIGHT LINE" << endl;
         if (max_wright[3] > 0)
             max = max_wright[3];
         else
@@ -169,7 +170,7 @@ cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publ
     
     else
     {
-        cout << "LEFT LINE " <<endl;
+        //cout << "LEFT LINE " <<endl;
         if (max_wleft[3] > 0)
             max = max_wleft[3];
         else
@@ -218,6 +219,8 @@ int main(int argc, char** argv)
     ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
     cv::VideoCapture cap(0);
+    cv::Size size = cv::Size((int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT));
+    cv::VideoWriter writer("output.avi", cv::VideoWriter::fourcc('X','V','I','D'), 5.0, size, true);
 
     cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
@@ -225,19 +228,21 @@ int main(int argc, char** argv)
 
     LANE_DETECTION *lane_detection = new LANE_DETECTION();
     
-    //std_msgs::UInt8MultiArray msgArray;
+    std_msgs::UInt8MultiArray msgArray;
     
     LANE_DETECTION::ret1 r1;
 
     while(nh.ok())
     {
+        
         cv::Mat src;
         
         cap.read(src);
 
         if(!src.empty())
         {
-            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out;
+            //double st=static_cast<double>(cv::getTickCount());
+            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out, save_img;
             vector<uchar> encode;
             vector<int> encode_param;
 
@@ -252,6 +257,8 @@ int main(int argc, char** argv)
 
             //Fisheye lense calibration
             cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
+            
+            writer << img;
 
             //Warpped img
             r1 = lane_detection -> warpping(img);
@@ -268,12 +275,19 @@ int main(int argc, char** argv)
             lane_detection -> stop_line(roi_img, &stop_pub);
         
             cv::imshow("result", out);
+            //cv::imshow("warp", img);
 
-            //cv::imencode(".jpg", out, encode, encode_param);  //encode -> unsigned char array
-            //msgArray.data.clear();
-            //msgArray.data.resize(encode.size());
-            //std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
-            //img_pub.publish(msgArray);
+            cv::imencode(".jpg", src, encode, encode_param);  //encode -> unsigned char array
+            msgArray.data.clear();
+            msgArray.data.resize(encode.size());
+            std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
+            img_pub.publish(msgArray);
+            
+            //double end=static_cast<double>(cv::getTickCount());
+
+            //double fps=1000/(end-st)/cv::getTickFrequency();
+            
+            //cout << "fps = " << fps << endl;
 
             int key = cv::waitKey(2);
             if(key == 27)

@@ -50,13 +50,15 @@ class Course
 		string state;
 		int stop;
 		int count;
+		int flag;
 		
 		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
 		void stopCallback(const std_msgs::Int32::ConstPtr& stop_state);
 		void publish_MAX_VEL(ros::Publisher *velocity);
+		void publish_ANGLE(ros::Publisher *angular);
 };
 
-Course::Course() : count(0)
+Course::Course() : count(0), flag(0)
 {
 }
 
@@ -67,12 +69,50 @@ Course::~Course()
 void Course::stateCallback(const std_msgs::String::ConstPtr& nano_state)
 {
 	state = nano_state->data.c_str();
+	cout << state << endl;
 }
 
 void Course::stopCallback(const std_msgs::Int32::ConstPtr& stop_state)
 {
 	stop = stop_state->data;
-	count ++;
+}
+
+void Course::publish_ANGLE(ros::Publisher *angle_stop)
+{
+	std_msgs::Int32 ANGLE_STOP;
+	enum Statement STATE;
+	
+	switch(statement[state])
+	{
+		case person:
+		case red:
+			flag = 1;
+			ANGLE_STOP.data = 1;
+			break;
+		case green:
+			flag = 1;
+			break;
+		default:
+			flag = 0;
+			ANGLE_STOP.data = 0;
+			break;
+	}
+	
+	cout << "angle flag = " << flag << endl;
+	
+	if (stop == 1 && flag == 0)
+	{
+		count++;
+		ANGLE_STOP.data = 1;
+		if (count > 20)
+		{
+			flag = 1;
+			count = 0;
+			ANGLE_STOP.data = 0;
+		}
+	}
+	
+	angle_stop -> publish(ANGLE_STOP);
 }
 
 void Course::publish_MAX_VEL(ros::Publisher *velocity)
@@ -84,9 +124,12 @@ void Course::publish_MAX_VEL(ros::Publisher *velocity)
 	{
 		case person:
 		case red:
-			MAX_VEL.data = 0;
+			flag = 1;
+			MAX_VEL.data = 0.0;
 			break;
 		case green:
+			flag = 1;
+			MAX_VEL.data = 0.05;
 		case avoid_right:
 		case no_right_turn:
 		case school_zone_off:
@@ -95,23 +138,37 @@ void Course::publish_MAX_VEL(ros::Publisher *velocity)
 		case first_parking:
 		case second_parking:
 		case avoid_left:
+			flag = 0;
 			MAX_VEL.data = 0.05;
 			break;
 		case speed_up:
+			flag = 0;
 			MAX_VEL.data = 0.1;
 			break;
 		case school_zone:
+			flag = 0;
 			MAX_VEL.data = 0.02;
 			break;
 		default :
+			flag = 0;
 			MAX_VEL.data = 0.05;
 			break;
 	}
 	
-	if (count < 5)
+	cout << "MAX_VEL flag = " << flag << endl;
+	
+	if (stop == 1 && flag == 0)
 	{
+		count++;
 		MAX_VEL.data = 0.0;
+		if (count > 20)
+		{
+			flag = 1;
+			count = 0;
+			MAX_VEL.data = 0.05;
+		}
 	}
+	
 	
 	velocity -> publish(MAX_VEL);
 	
@@ -124,15 +181,17 @@ int main(int argc, char** argv)
 	
 	Course *course = new Course();
 	
-	ros::Subscriber sub_state = nh.subscribe<std_msgs::String>("nano/state", 1, &Course::stateCallback, course);
+	ros::Subscriber sub_state = nh.subscribe<std_msgs::String>("nano/status", 1, &Course::stateCallback, course);
 	ros::Subscriber sub_stop = nh.subscribe<std_msgs::Int32>("pi/stop", 1, &Course::stopCallback, course);
 	ros::Publisher pub_MAX_VEL = nh.advertise<std_msgs::Float32>("pi/MAX_VEL", 1);
+	ros::Publisher pub_ANGLE_STOP = nh.advertise<std_msgs::Int32>("pi/ANGLE_STOP", 1);
 	
 	ros::Rate loop_rate(10);
 	
 	while(nh.ok())
 	{
 		course -> publish_MAX_VEL(&pub_MAX_VEL);
+		course -> publish_ANGLE(&pub_ANGLE_STOP);
 		ros::spinOnce();
 		loop_rate.sleep();
 	}
