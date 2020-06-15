@@ -1,10 +1,10 @@
 #include "ros/ros.h"
-#include <iostream>
 #include "std_msgs/Int32.h"
 #include "std_msgs/Float32.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/Twist.h"
 #include <unordered_map>
+#include "course_control.h"
 
 using namespace std;
 
@@ -41,28 +41,7 @@ unordered_map<string, int> statement = {
 	{"avoid_left", avoid_left}
 };
 
-class Course
-{
-	public :
-		Course();
-		~Course();
-		
-		string state;
-		int stop;
-		int count;
-		int flag;
-		
-		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
-		void stopCallback(const std_msgs::Int32::ConstPtr& stop_state);
-		void publish_MAX_VEL(ros::Publisher *velocity);
-		void publish_ANGLE(ros::Publisher *angular);
-};
-
 Course::Course() : count(0), flag(0)
-{
-}
-
-Course::~Course()
 {
 }
 
@@ -77,7 +56,7 @@ void Course::stopCallback(const std_msgs::Int32::ConstPtr& stop_state)
 	stop = stop_state->data;
 }
 
-void Course::publish_ANGLE(ros::Publisher *angle_stop)
+void Course::publishAngle(ros::Publisher *angle_stop)
 {
 	std_msgs::Int32 ANGLE_STOP;
 	enum Statement STATE;
@@ -91,31 +70,30 @@ void Course::publish_ANGLE(ros::Publisher *angle_stop)
 			break;
 		case green:
 			flag = 1;
+			ANGLE_STOP.data = 0;
 			break;
 		default:
-			flag = 0;
+			flag = 1;
 			ANGLE_STOP.data = 0;
 			break;
 	}
-	
-	cout << "angle flag = " << flag << endl;
+	count = 0;
 	
 	if (stop == 1 && flag == 0)
 	{
+		cout << "stop line : ANGLE = " << count << endl;
 		count++;
 		ANGLE_STOP.data = 1;
 		if (count > 20)
 		{
 			flag = 1;
-			count = 0;
-			ANGLE_STOP.data = 0;
 		}
 	}
 	
 	angle_stop -> publish(ANGLE_STOP);
 }
 
-void Course::publish_MAX_VEL(ros::Publisher *velocity)
+void Course::publishMaxVel(ros::Publisher *velocity)
 {
 	std_msgs::Float32 MAX_VEL;
 	enum Statement STATE;
@@ -132,21 +110,21 @@ void Course::publish_MAX_VEL(ros::Publisher *velocity)
 			MAX_VEL.data = 0.05;
 		case avoid_right:
 		case no_right_turn:
+			flag = 0;
+			MAX_VEL.data = 0.05;
+			break;
 		case school_zone_off:
 		case roundabout:
 		case tunnel:
 		case first_parking:
 		case second_parking:
 		case avoid_left:
-			flag = 0;
 			MAX_VEL.data = 0.05;
 			break;
 		case speed_up:
-			flag = 0;
 			MAX_VEL.data = 0.1;
 			break;
 		case school_zone:
-			flag = 0;
 			MAX_VEL.data = 0.02;
 			break;
 		default :
@@ -155,20 +133,17 @@ void Course::publish_MAX_VEL(ros::Publisher *velocity)
 			break;
 	}
 	
-	cout << "MAX_VEL flag = " << flag << endl;
-	
 	if (stop == 1 && flag == 0)
 	{
+		cout << "stop line : MAX = " << count << endl;
 		count++;
 		MAX_VEL.data = 0.0;
 		if (count > 20)
 		{
 			flag = 1;
 			count = 0;
-			MAX_VEL.data = 0.05;
 		}
 	}
-	
 	
 	velocity -> publish(MAX_VEL);
 	
@@ -190,8 +165,8 @@ int main(int argc, char** argv)
 	
 	while(nh.ok())
 	{
-		course -> publish_MAX_VEL(&pub_MAX_VEL);
-		course -> publish_ANGLE(&pub_ANGLE_STOP);
+		course -> publishMaxVel(&pub_MAX_VEL);
+		course -> publishAngle(&pub_ANGLE_STOP);
 		ros::spinOnce();
 		loop_rate.sleep();
 	}

@@ -8,44 +8,15 @@
 #include <std_msgs/Int32.h>
 #include <vector>
 #include <time.h>
+#include "lane_detection_pub.h"
 
 using namespace std;
 
-class LANE_DETECTION
-{
-    public:
-        //생성자
-        LANE_DETECTION();
-        //소멸자 
-        ~LANE_DETECTION();
-        
-        typedef struct warpped_ret
-        {
-            cv::Mat w_img;
-            cv::Mat minverse;
-        }ret1;
-        
-        //FUNCTION
-        cv::Mat color_filter(const cv::Mat &);
-        ret1 warpping(const cv::Mat &);
-        cv::Mat roi(const cv::Mat &);
-        cv::Mat window_roi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub);
-        void stop_line(const cv::Mat &binary_img, ros::Publisher *stop_pub);
-        
-    private:
-        double h;
-        double w;
-};
-
-LANE_DETECTION::LANE_DETECTION() : h(480), w(640)
+LANEDETECTOR::LANEDETECTOR() : h(480), w(640)
 {
 }
 
-LANE_DETECTION::~LANE_DETECTION()
-{
-}
-
-cv::Mat LANE_DETECTION::color_filter(const cv::Mat &image)
+cv::Mat LANEDETECTOR::colorFilter(const cv::Mat &image)
 {
     cv::Mat hsv, v, white, yellow, or_img;
     cv::Mat yellow_lower = (cv::Mat1d(1, 3) << 5, 90, 100);
@@ -63,9 +34,9 @@ cv::Mat LANE_DETECTION::color_filter(const cv::Mat &image)
     return or_img;
 }
 
-LANE_DETECTION::ret1 LANE_DETECTION::warpping(const cv::Mat &image)
+LANEDETECTOR::warpped_ret LANEDETECTOR::warping(const cv::Mat &image)
 {
-    ret1 r;
+    warpped_ret r;
     cv::Mat w_img, transform_matrix, minv;
     vector<cv::Point2f> source = {cv::Point2f(0.4 * w, 0.45 * h), cv::Point2f(0.6 * w, 0.45 * h), cv::Point2f(0.0, h), cv::Point2f(w, h)};
     vector<cv::Point2f> destination = {cv::Point2f(0.27 * w, 0), cv::Point2f(0.65 * w, 0), cv::Point2f(0.27 * w, h), cv::Point2f(0.73 * w, h)};
@@ -78,7 +49,7 @@ LANE_DETECTION::ret1 LANE_DETECTION::warpping(const cv::Mat &image)
     return r;
 }
 
-cv::Mat LANE_DETECTION::roi(const cv::Mat &image)
+cv::Mat LANEDETECTOR::roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
@@ -89,7 +60,7 @@ cv::Mat LANE_DETECTION::roi(const cv::Mat &image)
     return masked_img;
 }
 
-cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) {
+cv::Mat LANEDETECTOR::windowRoi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) {
     std_msgs::Int32 center;
     cv::Mat out_img = binary_img.clone(), img_cp;
     vector<int> max_wleft, max_wright;
@@ -184,7 +155,7 @@ cv::Mat LANE_DETECTION::window_roi(const cv::Mat &binary_img, int num, ros::Publ
     return out_img;
 }
 
-void LANE_DETECTION::stop_line(const cv::Mat &binary_img, ros::Publisher *stop_pub)
+void LANEDETECTOR::stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub)
 {
     std_msgs::Int32 stop;
     stop.data = 0;
@@ -203,8 +174,10 @@ void LANE_DETECTION::stop_line(const cv::Mat &binary_img, ros::Publisher *stop_p
     
     for (int i = 0; i < horizontal.cols; i++)
         hist.push_back(cv::sum(img_cp.col(i))[0]);
-    if(*hist.ptr<double>(hist.rows/2, 1) > 20)
+    if(*hist.ptr<double>(hist.rows/2, 1) > 100)
         stop.data = 1;
+    else
+        stop.data = 0;
     
     if (stop.data)
         stop_pub -> publish(stop);
@@ -219,18 +192,14 @@ int main(int argc, char** argv)
     ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
     cv::VideoCapture cap(0);
-    cv::Size size = cv::Size((int)cap.get(cv::CAP_PROP_FRAME_WIDTH), (int)cap.get(cv::CAP_PROP_FRAME_HEIGHT));
-    cv::VideoWriter writer("output.avi", cv::VideoWriter::fourcc('X','V','I','D'), 5.0, size, true);
 
     cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
     cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
 
-    LANE_DETECTION *lane_detection = new LANE_DETECTION();
+    LANEDETECTOR *lane_detector = new LANEDETECTOR();
     
-    std_msgs::UInt8MultiArray msgArray;
-    
-    LANE_DETECTION::ret1 r1;
+    LANEDETECTOR::warpped_ret r1;
 
     while(nh.ok())
     {
@@ -243,14 +212,9 @@ int main(int argc, char** argv)
         {
             //double st=static_cast<double>(cv::getTickCount());
             cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out, save_img;
-            vector<uchar> encode;
-            vector<int> encode_param;
-
-            encode_param.push_back(cv::IMWRITE_JPEG_QUALITY);  //jpg format compressing
-            encode_param.push_back(20);  //compressed in 20%
 
             //Color filter
-            filtered_img = lane_detection -> color_filter(src);
+            filtered_img = lane_detector -> colorFilter(src);
 
             //180도 rotation
             cv::flip(filtered_img, rotate_img, -1);
@@ -258,36 +222,21 @@ int main(int argc, char** argv)
             //Fisheye lense calibration
             cv::undistort(rotate_img, img, mtx, dist, newcameramtx);
             
-            writer << img;
-
             //Warpped img
-            r1 = lane_detection -> warpping(img);
+            r1 = lane_detector -> warping(img);
             warped_img = r1.w_img;
             minv = r1.minverse;
 
             //ROI img
-            roi_img = lane_detection -> roi(warped_img);
+            roi_img = lane_detector -> roi(warped_img);
             
             //Window ROI
-            out = lane_detection -> window_roi(roi_img, 4, &center_pub);
+            out = lane_detector -> windowRoi(roi_img, 4, &center_pub);
             
             //Find Stop Line
-            lane_detection -> stop_line(roi_img, &stop_pub);
+            lane_detector -> stopLine(roi_img, &stop_pub);
         
             cv::imshow("result", out);
-            //cv::imshow("warp", img);
-
-            cv::imencode(".jpg", src, encode, encode_param);  //encode -> unsigned char array
-            msgArray.data.clear();
-            msgArray.data.resize(encode.size());
-            std::copy(encode.begin(), encode.end(), msgArray.data.begin());  //copy to msgArray
-            img_pub.publish(msgArray);
-            
-            //double end=static_cast<double>(cv::getTickCount());
-
-            //double fps=1000/(end-st)/cv::getTickFrequency();
-            
-            //cout << "fps = " << fps << endl;
 
             int key = cv::waitKey(2);
             if(key == 27)
