@@ -15,9 +15,16 @@ class ControlLane
 		float MAX_VEL = 0;
 		float angular_z = 0;
 		static int stop;
+		int count = 0;
+		int wait_flag = 0;
+		int right_laser = 0;
+		
+		double distance = 0;
 		
 		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
 		void publishCmdVel(ros::Publisher *cmd_vel);
+		void firstParking(ros::Publisher *cmd_vel);
+		void secondParking(ros::Publisher *cmd_vel);
 
 	private:
 		int error = 0;

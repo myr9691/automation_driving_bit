@@ -137,7 +137,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-add_executable(AutoDriving src/autodriving.cpp)
+add_executable(AutoDriving src/autodriving.cpp src/tof.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -153,6 +153,7 @@ add_executable(AutoDriving src/autodriving.cpp)
 target_link_libraries(AutoDriving
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  -lwiringPi
 )
 
 #############
