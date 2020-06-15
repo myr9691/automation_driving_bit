@@ -22,29 +22,6 @@
 
 using namespace std;
 
-enum POSISION_ARRANGE {
-	find_pos = 0,
-	rearrange
-};
-
-enum PARKING {
-	pause_0 = 0,
-	turn_right,
-	pause_1,
-	turn_left1,
-	turn_left2,
-	pause_2,
-	nothing
-};
-
-enum WAYOUT {
-	start = 0,
-	go_back,
-	go_left1,
-	go_left2,
-	go_straight
-};
-
 enum Statement
 {
 	person,
@@ -261,12 +238,14 @@ ControlLane::ControlLane() : lastError(0)
 }
 
 int ControlLane::stop = 1;
+int ControlLane::right_laser = ON;
+std::string ControlLane::state;
 
 void ControlLane::stateCallback(const std_msgs::String::ConstPtr& nano_state)
 {
     enum Statement STATE;
 
-	state = nano_state->data.c_str();
+    state = nano_state->data.c_str();
 
     switch(statement[state])
 	{
@@ -351,24 +330,10 @@ void ControlLane::publishCmdVel(ros::Publisher *cmd_vel)
 }
 
 void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_address, int long_range)
-{
-    right_laser = ON;
-
-    wiringPiSetupGpio();			
-	pinMode(20, OUTPUT);		
-	pinMode(21, OUTPUT);
-	digitalWrite(20, ON);
-	digitalWrite(21, OFF);
-
-    enum POSISION_ARRANGE POS_ARRANGE = find_pos;
-	enum PARKING PARKING_ANGLE = pause_0;
-	enum WAYOUT OUT_ANGLE = start;
-
+{     
     geometry_msgs::Twist twist;
 
     distance = tofReadDistance();
-    ROS_INFO("POS_ARRANGE = %d", POS_ARRANGE);
-    ROS_INFO("PARKING_ANGLE = %d", PARKING_ANGLE);
     ROS_INFO("distance = %f", distance);
     ROS_INFO("SPEED = %f", twist.linear.x);
     ROS_INFO("ANGLE = %f", twist.angular.z);
@@ -389,17 +354,19 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
             cmd_vel -> publish(twist);
             if(distance > 140.0 & distance < 450)
                 count += 1;
+	    cout << "POS_ARRANGE = 0" << endl;
         }
         
         ROS_INFO("count = %d\n", count);
         
         //NO Obstacle
-        if (distance < 100.0 & count > 100)
+        if (distance < 100.0 && count > 30 && POS_ARRANGE == find_pos)
         {
             twist.linear.x = SPEED_0;
             twist.angular.z = ANGLE_0;
             cmd_vel -> publish(twist);
             POS_ARRANGE = rearrange;
+	    cout << "POS_ARRANGE = 1" << endl;
         }
         
         //Rearrange
@@ -408,8 +375,10 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
             twist.linear.x = SPEED_L;
             twist.angular.z = ANGLE_0;
             cmd_vel -> publish(twist);
-            if(distance > 110 & distance < 450 & count > 100)
+	    cout << "POS_ARRANGE = 2" << endl;
+            if(distance > 110 && distance < 450 && count > 30)
             {
+		cout << "BACK LASER ON!" << endl;
                 digitalWrite(20, OFF);  //right
                 digitalWrite(21, ON);   //back
                 right_laser = OFF;
@@ -433,12 +402,12 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         if (PARKING_ANGLE == pause_0)
         {
             cout <<  "waiting for back laser" << endl;
-            cout << "distance = " << distance << endl;
             if (distance > 300)
                 PARKING_ANGLE = turn_right;
         }
         else if (PARKING_ANGLE == turn_right)
         {
+	    cout << "PARKING_ANGLE = 0" << endl;
             twist.linear.x = -SPEED_P;
             twist.angular.z = 0.05;
             cmd_vel -> publish(twist);
@@ -452,18 +421,20 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         }
         else if (PARKING_ANGLE == turn_left1)
         {
+	    cout << "PARKING_ANGLE = 1" << endl;
             twist.linear.x = -SPEED_P;
             twist.angular.z = -0.2;
             cmd_vel -> publish(twist);
-            if(distance > 130)
+            if(distance > 140)
                 PARKING_ANGLE = turn_left2;
         }
         else if (PARKING_ANGLE == turn_left2)
         {
+	    cout << "PARKING_ANGLE = 2" << endl;
             twist.linear.x = -SPEED_P;
             twist.angular.z = -0.2;
             cmd_vel -> publish(twist);
-            if(distance < 75)
+            if(distance < 120)
                 PARKING_ANGLE = pause_2;
         }
         else if(PARKING_ANGLE == pause_2)
@@ -474,8 +445,10 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
             OUT_ANGLE = go_back;
             PARKING_ANGLE = nothing;
         }
+	
         if(OUT_ANGLE == go_back)
         {
+	    cout << "OUT_ANGLE = 0" << endl;
             twist.linear.x = -SPEED_P;
             twist.angular.z = ANGLE_0;
             cmd_vel -> publish(twist);
@@ -484,6 +457,7 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         }
         else if(OUT_ANGLE == go_left1)
         {
+	    cout << "OUT_ANGLE = 1" << endl;
             twist.linear.x = SPEED_0;
             twist.angular.z = 0.2;
             cmd_vel -> publish(twist);
@@ -492,6 +466,7 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         }
         else if(OUT_ANGLE == go_left2)
         {
+	    cout << "OUT_ANGLE = 2" << endl;
             twist.linear.x = SPEED_0;
             twist.angular.z = 0.2;
             cmd_vel -> publish(twist);
@@ -511,7 +486,7 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
     cmd_vel -> publish(twist);
 }
 
-void secondeParking(ros::Publisher *cmd_vel)
+void ControlLane::secondParking(ros::Publisher *cmd_vel)
 {
 
 }
@@ -519,10 +494,10 @@ void secondeParking(ros::Publisher *cmd_vel)
 int main(int argc, char** argv)
 {
     int i2c_bus = 0;
-	int i2c_address = 0;
-	int long_range = 0;
-    double poll_rate = 0
-
+    int i2c_address = 0;
+    int long_range = 0;
+    double poll_rate = 0;
+    
     ros::init(argc, argv, "AutoDriving");
     ros::NodeHandle nh, nh_priv("~");
     image_transport::ImageTransport it(nh);
@@ -545,13 +520,21 @@ int main(int argc, char** argv)
     sensor_msgs::ImagePtr Image;
 
     nh_priv.param("long_range", long_range, 0);
-	nh_priv.param("poll_rate", poll_rate, 100.0);
-	nh_priv.param("i2c_bus", i2c_bus, 1);
-	nh_priv.param("i2c_address", i2c_address, 0x29);
-
-	tofInit(i2c_bus, i2c_address, long_range);
+    nh_priv.param("poll_rate", poll_rate, 100.0);
+    nh_priv.param("i2c_bus", i2c_bus, 1);
+    nh_priv.param("i2c_address", i2c_address, 0x29);
 
     enum Statement STATE;
+    
+    wiringPiSetupGpio();			
+    pinMode(20, OUTPUT);		
+    pinMode(21, OUTPUT);
+    digitalWrite(20, ON);
+    digitalWrite(21, OFF);
+    
+    tofInit(i2c_bus, i2c_address, long_range);
+    
+    ControlLane::right_laser = ON;
 
     while(nh.ok())
     {
@@ -598,13 +581,13 @@ int main(int argc, char** argv)
                 break;
         }
 
-        switch(statement[state])
+        switch(statement[ControlLane::state])
         {
             case first_parking:
                 controllane -> firstParking(&pub_cmd_vel, i2c_bus, i2c_address, long_range);
                 break;
             case second_parking:
-                controllane -> secondeParking(&pub_cmd_vel);
+                controllane -> secondParking(&pub_cmd_vel);
                 break;
             default:
                 controllane -> publishCmdVel(&pub_cmd_vel);
