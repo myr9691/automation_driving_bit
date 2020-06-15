@@ -187,7 +187,8 @@ int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lane_detect");
     ros::NodeHandle nh;
-    ros::Publisher img_pub = nh.advertise<std_msgs::UInt8MultiArray>("pi/image", 1);
+    image_transport::ImageTransport it(nh);
+    image_transport::Publisher img_pub = it.advertise("pi/image", 1);
     ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
     ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
@@ -200,6 +201,8 @@ int main(int argc, char** argv)
     LANEDETECTOR *lane_detector = new LANEDETECTOR();
     
     LANEDETECTOR::warpped_ret r1;
+    
+    sensor_msgs::ImagePtr Image;
 
     while(nh.ok())
     {
@@ -232,6 +235,10 @@ int main(int argc, char** argv)
             
             //Window ROI
             out = lane_detector -> windowRoi(roi_img, 4, &center_pub);
+            
+            Image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", out).toImageMsg();
+            img_pub.publish(Image);
+            
             
             //Find Stop Line
             lane_detector -> stopLine(roi_img, &stop_pub);
