@@ -13,7 +13,7 @@
 
 #define SPEED_0 0.0
 #define SPEED_N 0.05
-#define SPEED_P 0.01
+#define SPEED_P 0.02
 #define SPEED_L -0.01
 #define ANGLE_0 0.0
 
@@ -64,7 +64,8 @@ LaneDetector::LaneDetector() : h(480), w(640)
 }
 
 int LaneDetector::center = 0;
-int LaneDetector::flag = 0;
+int LaneDetector::flag = 1;
+int LaneDetector::count_stop = 0;
 
 cv::Mat LaneDetector::colorFilter(const cv::Mat &image) const
 {
@@ -210,7 +211,7 @@ void LaneDetector::stopLine(const cv::Mat &binary_img)
     int horiz_size;
     cv::Mat hist, img_cp, horizontal, horizontal_img;
     
-    cv::Rect rect(0, h-80, w, 10);
+    cv::Rect rect(0, h-80, w, 40);
     img_cp = binary_img(rect);
     horizontal = img_cp.clone();
     
@@ -222,12 +223,13 @@ void LaneDetector::stopLine(const cv::Mat &binary_img)
     
     for (int i = 0; i < horizontal.cols; i++)
         hist.push_back(cv::sum(img_cp.col(i))[0]);
-    if(flag == 0 && *hist.ptr<double>(hist.rows/2, 1) > 800)
+    if(flag == 0 && *hist.ptr<double>(hist.rows/2, 1) > 400 && count_stop == 0)
     {
 	cout << *hist.ptr<double>(hist.rows/2, 1) << endl;
 	cout << "S T O P !!" << endl;
         sleep(5);
 	flag = 1;
+	count_stop ++;
     }
 }
 
@@ -283,19 +285,18 @@ void ControlLane::publishCmdVel(ros::Publisher *cmd_vel)
 			break;
 		case school_zone_off:
 		case roundabout:
-		case tunnel:
-		case first_parking:
-		case second_parking:
 		case avoid_left:
+			MAX_VEL = 0.05;
+			break;
+		case tunnel:
+			LaneDetector::count_stop = 0;
 			LaneDetector::flag = 0;
 			MAX_VEL = 0.05;
 			break;
 		case speed_up:
-			LaneDetector::flag = 0;
 			MAX_VEL = 0.1;
 			break;
 		case school_zone:
-			LaneDetector::flag = 0;
 			MAX_VEL = 0.02;
 			break;
 		case clear:
@@ -360,7 +361,7 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         ROS_INFO("count = %d\n", count);
         
         //NO Obstacle
-        if (distance < 100.0 && count > 30 && POS_ARRANGE == find_pos)
+        if (distance < 130.0 && count > 30 && POS_ARRANGE == find_pos)
         {
             twist.linear.x = SPEED_0;
             twist.angular.z = ANGLE_0;
@@ -409,9 +410,9 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         {
 	    cout << "PARKING_ANGLE = 0" << endl;
             twist.linear.x = -SPEED_P;
-            twist.angular.z = 0.05;
+            twist.angular.z = 0.1;
             cmd_vel -> publish(twist);
-            if (distance < 70)
+            if (distance < 80)
                 PARKING_ANGLE = pause_1;
         }
         else if(PARKING_ANGLE == pause_1)
@@ -423,24 +424,25 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
         {
 	    cout << "PARKING_ANGLE = 1" << endl;
             twist.linear.x = -SPEED_P;
-            twist.angular.z = -0.2;
+            twist.angular.z = -0.3;
             cmd_vel -> publish(twist);
-            if(distance > 140)
+            if(distance > 100)
                 PARKING_ANGLE = turn_left2;
         }
         else if (PARKING_ANGLE == turn_left2)
         {
 	    cout << "PARKING_ANGLE = 2" << endl;
             twist.linear.x = -SPEED_P;
-            twist.angular.z = -0.2;
+            twist.angular.z = -0.3;
             cmd_vel -> publish(twist);
-            if(distance < 120)
+            if(distance < 80)
                 PARKING_ANGLE = pause_2;
         }
         else if(PARKING_ANGLE == pause_2)
         {
             twist.linear.x = SPEED_0;
             twist.angular.z = ANGLE_0;
+	    sleep(3);
             cmd_vel -> publish(twist);
             OUT_ANGLE = go_back;
             PARKING_ANGLE = nothing;
@@ -452,43 +454,62 @@ void ControlLane::firstParking(ros::Publisher *cmd_vel, int i2c_bus, int i2c_add
             twist.linear.x = -SPEED_P;
             twist.angular.z = ANGLE_0;
             cmd_vel -> publish(twist);
-            if(distance < 50)
+            if(distance < 60)
                 OUT_ANGLE = go_left1;
         }
         else if(OUT_ANGLE == go_left1)
         {
 	    cout << "OUT_ANGLE = 1" << endl;
             twist.linear.x = SPEED_0;
-            twist.angular.z = 0.2;
+            twist.angular.z = 0.3;
             cmd_vel -> publish(twist);
-            if(distance > 100)
+            if(distance > 80)
                 OUT_ANGLE = go_left2;
         }
         else if(OUT_ANGLE == go_left2)
         {
 	    cout << "OUT_ANGLE = 2" << endl;
             twist.linear.x = SPEED_0;
-            twist.angular.z = 0.2;
+            twist.angular.z = 0.3;
             cmd_vel -> publish(twist);
             if(distance < 50)
-                OUT_ANGLE = go_straight;
+                OUT_ANGLE = go_out;
         }
-        else if(OUT_ANGLE == go_straight)
+        else if(OUT_ANGLE == go_out)
         {
-            for(int i = 0; i < 300; i++)
-            {
-                twist.linear.x = SPEED_N;
-                twist.angular.z = ANGLE_0;
-                cmd_vel -> publish(twist);
-            }
+	    twist.linear.x = SPEED_N;
+	    twist.angular.z = -0.02;
+	    cmd_vel -> publish(twist);
+	    cout << "OUT_ANGLE = 3" << endl;
+            if (distance > 300)
+		OUT_ANGLE = lane_follow;
         }
+	else if(OUT_ANGLE == lane_follow)
+	{
+	    cout << "OUT_ANGLE = 4" << endl;
+	    twist.linear.x = SPEED_N;
+	    twist.angular.z = angular_z < 0 ? -std::max(angular_z, -angle) : -std::min(angular_z, angle);
+	    cmd_vel -> publish(twist);
+	}
     }
     cmd_vel -> publish(twist);
 }
 
 void ControlLane::secondParking(ros::Publisher *cmd_vel)
 {
-
+    LaneDetector::flag = 0;
+    LaneDetector::count_stop = 0;
+    
+    geometry_msgs::Twist twist;
+    
+    error = LaneDetector::center - 327;
+    angular_z = Kp * error + Kd * (error - lastError);
+    lastError = error;
+    
+    twist.linear.x = 0.05;
+    twist.angular.z = angular_z < 0 ? -std::max(angular_z, -angle) : -std::min(angular_z, angle);
+    
+    cmd_vel -> publish(twist);
 }
 
 int main(int argc, char** argv)
@@ -573,6 +594,9 @@ int main(int argc, char** argv)
             
             //Find Stop Line
             lane_detector -> stopLine(roi_img);
+	    
+	    cout << "STOP FLAG = " << LaneDetector::flag << endl;
+	    cout << "COUNT STOP = " << LaneDetector::count_stop << endl;
         
             cv::imshow("result", out);
 
@@ -584,12 +608,15 @@ int main(int argc, char** argv)
         switch(statement[ControlLane::state])
         {
             case first_parking:
+		cout << "FIRST PARKING!" << endl;
                 controllane -> firstParking(&pub_cmd_vel, i2c_bus, i2c_address, long_range);
                 break;
             case second_parking:
+		cout << "SECOND PARKING!"<< endl;
                 controllane -> secondParking(&pub_cmd_vel);
                 break;
             default:
+		LaneDetector::flag = 1;
                 controllane -> publishCmdVel(&pub_cmd_vel);
                 break;
         }

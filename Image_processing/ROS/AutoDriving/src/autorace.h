@@ -29,7 +29,8 @@ class ControlLane
 			go_back,
 			go_left1,
 			go_left2,
-			go_straight
+			go_out,
+			lane_follow
 		};
 		
 		enum POSISION_ARRANGE POS_ARRANGE = find_pos;

@@ -15,6 +15,7 @@ class LaneDetector
 
         static int center;
         static int flag;
+        static int count_stop;
         
         //FUNCTION
         cv::Mat colorFilter(const cv::Mat &) const;
