@@ -17,6 +17,8 @@ class ControlLane
 		enum PARKING {
 			pause_0 = 0,
 			turn_right,
+			turn_right2,
+			turn_right3,
 			pause_1,
 			turn_left1,
 			turn_left2,
@@ -26,10 +28,16 @@ class ControlLane
 
 		enum WAYOUT {
 			start = 0,
+			out_right1,
+			out_right2,
+			out_right3,
+			out_left1,
+			out_left2,
+			out_pause,
 			go_back,
-			go_left1,
-			go_left2,
-			go_out,
+			go_left,
+			go_out_left,
+			go_out_right,
 			lane_follow
 		};
 		
@@ -47,11 +55,13 @@ class ControlLane
 		int wait_flag = 0;
 		static int right_laser;
 		double distance = 0;
+		int parking2 = 0;
+		int parking1 = 0;
 		
 		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
 		void publishCmdVel(ros::Publisher *cmd_vel);
 		void firstParking(ros::Publisher *cmd_vel, int, int, int);
-		void secondParking(ros::Publisher *cmd_vel);
+		void secondParking(ros::Publisher *cmd_vel, int, int, int);
 
 	private:
 		int error = 0;
