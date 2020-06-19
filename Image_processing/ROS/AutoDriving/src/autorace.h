@@ -2,6 +2,7 @@
 #define AUTORACE_H
 
 #include <iostream>
+#define ON 1
 
 class ControlLane
 {
@@ -53,7 +54,7 @@ class ControlLane
 		static int stop;
 		int count = 0;
 		int wait_flag = 0;
-		static int right_laser;
+		int right_laser = ON;
 		double distance = 0;
 		int parking2 = 0;
 		int parking1 = 0;

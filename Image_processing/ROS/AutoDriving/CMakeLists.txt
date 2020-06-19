@@ -154,6 +154,7 @@ target_link_libraries(AutoDriving
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   -lwiringPi
+  -lpthread
 )
 
 #############
