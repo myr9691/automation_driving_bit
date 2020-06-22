@@ -46,20 +46,21 @@ class ControlLane
 		enum PARKING PARKING_ANGLE = pause_0;
 		enum WAYOUT OUT_ANGLE = start;
 
-		static std::string state;
 		int lastError = 0;
 		int center = 0;
 		float MAX_VEL = 0;
 		float angular_z = 0;
-		static int stop;
+		int stop = 1;
 		int count = 0;
 		int wait_flag = 0;
 		int right_laser = ON;
 		double distance = 0;
 		int parking2 = 0;
 		int parking1 = 0;
+		int state = 0;
+		int pre_state = 0;
 		
-		void stateCallback(const std_msgs::String::ConstPtr& nano_state);
+		void eventCallback(const std_msgs::String::ConstPtr& nano_event);
 		void publishCmdVel(ros::Publisher *cmd_vel);
 		void firstParking(ros::Publisher *cmd_vel, int, int, int);
 		void secondParking(ros::Publisher *cmd_vel, int, int, int);

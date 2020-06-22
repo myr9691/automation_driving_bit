@@ -30,7 +30,9 @@ void* stopLinePassThread(void *ret);
 bool stop_line_detect = true;
 bool thread_run = false;
 
-enum Statement
+std::string event = "driving_start";
+
+enum Event
 {
 	person,
 	red,
@@ -45,11 +47,20 @@ enum Statement
 	first_parking,
 	second_parking,
 	avoid_left,
-	clear,
-	driving_start
+	clear
 };
 
-unordered_map<string, int> statement = {
+enum State
+{
+    driving_start,
+    Drivex0_red,
+    Drivex0_person,
+    Drivex1,
+    Drivex2,
+    Drivehalf
+};
+
+unordered_map<string, int> event_map = {
 	{"person", person},
 	{"red", red},
 	{"green", green},
@@ -181,11 +192,9 @@ cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, int num)
     //우회전 (왼쪽 선 참조)
     if (max_wleft[1] - max_wleft[0] > 0)
     {
-        //cout << "LEFT LINE" << endl;
+        cout << "LEFT LINE" << endl;
         if (max_wleft[3] > 0)
             max = max_wleft[3];
-        /*else
-            max = max_wleft[2];*/
         center = max + 102;
         cout << center << endl;
     }
@@ -193,22 +202,18 @@ cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, int num)
     //좌회전 (오른쪽 선 참조)
     else if (max_wright[0] - max_wright[1] > 0)
     {
-        //cout << "RIGHT LINE" << endl;
+        cout << "RIGHT LINE" << endl;
         if (max_wright[3] > 0)
             max = max_wright[3];
-        /*else
-            max = max_wright[2];*/
         center = max - 102;
         cout << center << endl;
     }
     
     else
     {
-        //cout << "LEFT LINE " <<endl;
+        cout << "LEFT LINE " <<endl;
         if (max_wleft[3] > 0)
             max = max_wleft[3];
-        /*else
-            max = max_wleft[2];*/
         center = max + 102;
         cout << center << endl;
     }
@@ -236,8 +241,6 @@ void LaneDetector::stopLine(const cv::Mat &binary_img)
     
     for (int i = 0; i < horizontal.cols; i++)
         hist.push_back(cv::sum(img_cp.col(i))[0]);
-    
-    cout << "ssssssss = " << *hist.ptr<double>(hist.rows/2, 1) << endl;
 	
     if(*hist.ptr<double>(hist.rows/2, 1) > 400)
     {
@@ -249,26 +252,17 @@ void LaneDetector::stopLine(const cv::Mat &binary_img)
 	    exit(2);
 	}
 	pthread_join(pth, (void**)t);
-	cout << "time = " << t << endl;
 	stop_line_detect = false;
     }
-    
-    
 }
 
 void* stopLineStopThread(void *input1)
 {
-    static int lineFlag=0;
     double t;
     int temp;
-    if(lineFlag==0)
-    {
-	clock_t start_t = clock();
-	sleep(5);
-	//lineFlag = 1;
-	clock_t end_t = clock();
-	t = (double)(end_t - start_t)/CLOCKS_PER_SEC;
-    }
+    
+    sleep(5);
+    
     return (void*)temp;
 }
 
@@ -276,9 +270,12 @@ void* stopLinePassThread(void *input2)
 {
     int temp;
     thread_run = true;
+    
     sleep(2);
+    
     stop_line_detect = true;
     thread_run = false;
+    
     return (void*)temp;
 }
 
@@ -288,71 +285,107 @@ ControlLane::ControlLane() : lastError(0)
 {
 }
 
-int ControlLane::stop = 1;
-std::string ControlLane::state = "driving_start";
-
-void ControlLane::stateCallback(const std_msgs::String::ConstPtr& nano_state)
+void ControlLane::eventCallback(const std_msgs::String::ConstPtr& nano_event)
 {
-    enum Statement STATE;
+    enum Event event_enum;
+    enum State state;
+    enum State pre_state;
 
-    state = nano_state->data.c_str();
+    event = nano_event->data.c_str();
 
-    switch(statement[state])
-	{
-		case person:
-		case red:
-		    stop = 1;
-		    break;
-		case green:
-		    stop = 0;
-		    break;
-		default:
-		    stop = 0;
-		    break;
-	}
+    switch(state)
+    {
+	case driving_start:
+	    if (event_map[event] == green)
+		state = Drivex1;
+	    else if (event_map[event] == red)
+		state = Drivex0_red;
+	    else if (event_map[event] == clear)
+		state = driving_start;
+	    break;
+	case Drivex1:
+	    if (event_map[event] == speed_up)
+		state = Drivex2;
+	    else if (event_map[event] == person)
+	    {
+		pre_state = Drivex1;
+		state = Drivex0_person;
+	    }
+	    else if (event_map[event] == red)
+		state = Drivex0_red;
+	    else if (event_map[event] == clear)
+		state = Drivex1;
+	    break;
+	case Drivex2:
+	    if (event_map[event] == school_zone)
+		state = Drivehalf;
+	    else if (event_map[event] == person)
+	    {
+		pre_state = Drivex2;
+		state = Drivex0_person;
+	    }
+	    else if (event_map[event] == clear)
+		state = Drivex2;
+	    break;
+	case Drivehalf:
+	    if (event_map[event] == school_zone_off)
+		state = Drivex1;
+	    else if (event_map[event] == person)
+	    {
+		pre_state = Drivehalf;
+		state = Drivex0_person;
+	    }
+	    else if (event_map[event] == clear)
+		state = Drivehalf;
+	    break;
+	case Drivex0_person:
+	    if (event_map[event] == clear)
+		state = pre_state;
+	    else if (event_map[event] == green)
+	    {
+		state = Drivex1;
+		parking1 = 0;
+		parking2 = 0;
+	    }
+	    break;
+	case Drivex0_red:
+	    if (event_map[event] == green)
+		state = Drivex1;
+	    else if (event_map[event] == clear)
+		state = Drivex0_red;
+	    break;
+    }
 }
 
 void ControlLane::publishCmdVel(ros::Publisher *cmd_vel)
 {
     geometry_msgs::Twist twist;
-
-    enum Statement STATE;
     
-    switch(statement[state])
+    enum State state;
+    
+    switch(state)
     {
-	    case person:
-	    case red:
-		MAX_VEL = 0.0;
-		break;
-	    case green:
-		parking1 = 0;
-		parking2 = 0;
-		MAX_VEL = 0.05;
-		break;
-	    case avoid_right:
-	    case no_right_turn:
-		MAX_VEL = 0.05;
-		break;
-	    case school_zone_off:
-	    case tunnel:
-	    case avoid_left:
-	    case roundabout:
-		MAX_VEL = 0.05;
-		break;
-	    case speed_up:
-		MAX_VEL = 0.1;
-		break;
-	    case school_zone:
-		MAX_VEL = 0.02;
-		break;
-	    case clear:
-		break;
-	    default:
-		MAX_VEL = 0.0;
-		break;
+	case Drivex1:
+	    MAX_VEL = 0.05;
+	    stop = 0;
+	    break;
+	case Drivex2:
+	    MAX_VEL = 0.1;
+	    stop = 0;
+	    break;
+	case Drivehalf:
+	    MAX_VEL = 0.02;
+	    stop = 0;
+	    break;
+	case Drivex0_person:
+	case Drivex0_red:
+	    MAX_VEL = 0.0;
+	    stop = 1;
+	    break;
     }
 
     cout << "STATE = " << state << endl;
+    cout << "EVENT = " << event << endl;
     cout << "MAX_VEL = " << MAX_VEL << endl;
     
     error = LaneDetector::center - 327;
@@ -727,12 +760,12 @@ int main(int argc, char** argv)
     ros::NodeHandle nh, nh_priv("~");
     image_transport::ImageTransport it(nh);
     image_transport::Publisher img_pub = it.advertise("pi/image", 1);
-
+    
     LaneDetector *lane_detector = new LaneDetector();
     ControlLane *controllane = new ControlLane();
-
+    
     ros::Publisher pub_cmd_vel = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
-    ros::Subscriber sub_state = nh.subscribe<std_msgs::String>("nano/status", 1, &ControlLane::stateCallback, controllane);
+    ros::Subscriber sub_event = nh.subscribe<std_msgs::String>("nano/event", 1, &ControlLane::eventCallback, controllane);
 
     cv::VideoCapture cap(0);
 
@@ -749,7 +782,7 @@ int main(int argc, char** argv)
     nh_priv.param("i2c_bus", i2c_bus, 1);
     nh_priv.param("i2c_address", i2c_address, 0x29);
 
-    enum Statement STATE;
+    enum Event event_enum;
     
     wiringPiSetupGpio();			
     pinMode(20, OUTPUT);		
@@ -818,7 +851,7 @@ int main(int argc, char** argv)
                 break;
         }
 
-        switch(statement[ControlLane::state])
+        switch(event_map[event])
         {
             case first_parking:
 		cout << "FIRST PARKING!" << endl;
