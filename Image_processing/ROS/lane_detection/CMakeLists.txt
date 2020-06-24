@@ -152,6 +152,7 @@ add_executable(lane_detection src/lane_detection_pub.cpp)
 target_link_libraries(lane_detection
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
+-lpthread
 )
 
 #############

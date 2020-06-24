@@ -1,22 +1,25 @@
-#include <iostream>
-#include <cv_bridge/cv_bridge.h>
-#include <opencv2/opencv.hpp>
-#include <image_transport/image_transport.h>
 #include <ros/ros.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <std_msgs/UInt8MultiArray.h>
-#include <std_msgs/Int32.h>
 #include <vector>
-#include <time.h>
+#include "std_msgs/Int32.h"
+#include "cv_bridge/cv_bridge.h"
+#include "image_transport/image_transport.h"
 #include "lane_detection_pub.h"
+#include "pthread.h"
 
 using namespace std;
 
-LANEDETECTOR::LANEDETECTOR() : h(480), w(640)
+void* stopLinePassThread(void *ret);
+
+bool stop_line_detect = true;
+bool thread_run = false;
+
+LaneDetector::LaneDetector() : h(480), w(640)
 {
 }
 
-cv::Mat LANEDETECTOR::colorFilter(const cv::Mat &image)
+cv::Mat LaneDetector::colorFilter(const cv::Mat &image)
 {
     cv::Mat hsv, v, white, yellow, or_img;
     cv::Mat yellow_lower = (cv::Mat1d(1, 3) << 5, 90, 100);
@@ -34,7 +37,7 @@ cv::Mat LANEDETECTOR::colorFilter(const cv::Mat &image)
     return or_img;
 }
 
-LANEDETECTOR::warpped_ret LANEDETECTOR::warping(const cv::Mat &image)
+LaneDetector::warpped_ret LaneDetector::warping(const cv::Mat &image)
 {
     warpped_ret r;
     cv::Mat w_img, transform_matrix, minv;
@@ -49,7 +52,7 @@ LANEDETECTOR::warpped_ret LANEDETECTOR::warping(const cv::Mat &image)
     return r;
 }
 
-cv::Mat LANEDETECTOR::roi(const cv::Mat &image)
+cv::Mat LaneDetector::roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
@@ -60,8 +63,9 @@ cv::Mat LANEDETECTOR::roi(const cv::Mat &image)
     return masked_img;
 }
 
-cv::Mat LANEDETECTOR::windowRoi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) {
-    std_msgs::Int32 center;
+cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) 
+{
+    std_msgs::Int32 center_pub_val;
     cv::Mat out_img = binary_img.clone(), img_cp;
     vector<int> max_wleft, max_wright;
     int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
@@ -74,10 +78,10 @@ cv::Mat LANEDETECTOR::windowRoi(const cv::Mat &binary_img, int num, ros::Publish
         cv::Mat hist;
         double max_l = 0, max_r = 0;
         max_left = 0; max_right = 0; max = 0;
-        int win_y_top = int(h)-(40*(wd+1));
-        int win_y_bottom = win_y_top + 40;
+        int win_y_top = int(h)-(50*(wd+1));
+        int win_y_bottom = win_y_top + 50;
         
-        cv::Rect rect(0, h-40*(wd+1), w, 40);
+        cv::Rect rect(0, h-50*(wd+1), w, 50);
         img_cp = binary_img(rect);
         
         for (int i = 0; i < img_cp.cols; i++)
@@ -119,12 +123,13 @@ cv::Mat LANEDETECTOR::windowRoi(const cv::Mat &binary_img, int num, ros::Publish
     if (max_wleft[1] - max_wleft[0] > 0)
     {
         //cout << "LEFT LINE" << endl;
-        if (max_wleft[3] > 0)
+        if (max_wleft[3] > 100)
             max = max_wleft[3];
         else
-            max = max_wleft[2];
-        center.data = max + 102;
-        cout << center.data << endl;
+            max = max_wleft[1];
+        center_pub_val.data = max + 102;
+        center = max + 102;
+        cout << center_pub_val.data << endl;
     }
     
     //좌회전 (오른쪽 선 참조)
@@ -135,34 +140,38 @@ cv::Mat LANEDETECTOR::windowRoi(const cv::Mat &binary_img, int num, ros::Publish
             max = max_wright[3];
         else
             max = max_wright[2];
-        center.data = max - 102;
-        cout << center.data << endl;
+        center_pub_val.data = max - 102;
+        center = max - 102;
+        cout << center_pub_val.data << endl;
     }
     
     else
     {
         //cout << "LEFT LINE " <<endl;
-        if (max_wleft[3] > 0)
+        if (max_wleft[3] > 100)
             max = max_wleft[3];
         else
-            max = max_wleft[2];
-        center.data = max + 102;
-        cout << center.data << endl;
+            max = max_wleft[1];
+        center_pub_val.data = max + 102;
+        center = max + 102;
+        cout << center_pub_val.data << endl;
     }
     
-    center_pub -> publish(center);
+    center_pub -> publish(center_pub_val);
 
     return out_img;
 }
 
-void LANEDETECTOR::stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub)
+void LaneDetector::stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub)
 {
     std_msgs::Int32 stop;
-    stop.data = 0;
-    int horiz_size;
+    int horiz_size, err = 0;
+    pthread_t pth;
+    int t = 0;
+    int input = 0;
     cv::Mat hist, img_cp, horizontal, horizontal_img;
     
-    cv::Rect rect(0, h-80, w, 80);
+    cv::Rect rect(center - 50, h-150, 50, 50);
     img_cp = binary_img(rect);
     horizontal = img_cp.clone();
     
@@ -174,22 +183,43 @@ void LANEDETECTOR::stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub)
     
     for (int i = 0; i < horizontal.cols; i++)
         hist.push_back(cv::sum(img_cp.col(i))[0]);
-    if(*hist.ptr<double>(hist.rows/2, 1) > 100)
+	stop.data = 0;
+    if(*hist.ptr<double>(hist.rows/2, 1) > 400)
+    {
+#ifdef DBG
+	    cout << "S T O P !!" << endl;
+#endif
         stop.data = 1;
-    else
-        stop.data = 0;
-    
-    if (stop.data)
         stop_pub -> publish(stop);
+        stop_line_detect = false;
+    }
+}
+
+void* stopLinePassThread(void *input2)
+{
+    int temp;
+    thread_run = true;
+    
+    sleep(7);
+    
+    stop_line_detect = true;
+    thread_run = false;
+    
+    return (void*)temp;
 }
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "lane_detect");
+    int err = 0;
+    pthread_t pth;
+    int input = 0;
+    int t = 0;
+
+    ros::init(argc, argv, "lane_detector");
     ros::NodeHandle nh;
     image_transport::ImageTransport it(nh);
     image_transport::Publisher img_pub = it.advertise("pi/image", 1);
-    ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/lane", 1);
+    ros::Publisher center_pub = nh.advertise<std_msgs::Int32>("pi/center", 1);
     ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
     cv::VideoCapture cap(0);
@@ -198,9 +228,8 @@ int main(int argc, char** argv)
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
     cv::Mat newcameramtx = (cv::Mat1d(3, 3) << 273.75825806, 0., 318.4331204, 0., 391.74940796, 283.77532838, 0., 0., 1.);
 
-    LANEDETECTOR *lane_detector = new LANEDETECTOR();
-    
-    LANEDETECTOR::warpped_ret r1;
+    LaneDetector *lane_detector = new LaneDetector();
+    LaneDetector::warpped_ret r1;
     
     sensor_msgs::ImagePtr Image;
 
@@ -241,8 +270,32 @@ int main(int argc, char** argv)
             
             
             //Find Stop Line
-            lane_detector -> stopLine(roi_img, &stop_pub);
-        
+            if (stop_line_detect)
+                lane_detector -> stopLine(roi_img, &stop_pub);
+            else if(!stop_line_detect && !thread_run)
+            {
+                if (err = pthread_create(&pth, NULL, stopLinePassThread, (void*)&input) < 0)
+                {
+                    perror("Thread2 error : ");
+                    exit(2);
+                }
+                pthread_detach(pth);
+            }
+            if(stop_line_detect == true)
+            {
+#ifdef DBG
+                cout << "STOP LINE DETECT = 1" << endl;
+#endif
+            }
+            else
+            {
+#ifdef DBG
+                cout << "STOP LINE DETECT = 0" << endl;
+#endif
+            }
+#ifdef DBG
+                cout << "THREAD RUN = " << thread_run << endl;
+#endif
             cv::imshow("result", out);
 
             int key = cv::waitKey(2);
