@@ -20,8 +20,8 @@ class LaneDetector
         cv::Mat lightRemoval(const cv::Mat &);
         warpped_ret warping(const cv::Mat &);
         cv::Mat roi(const cv::Mat &);
-        cv::Mat windowRoi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub);
-        void stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub);
+        cv::Mat windowRoi(const cv::Mat &, const cv::Mat &, int num, ros::Publisher *center_pub);
+        void stopLine(const cv::Mat &, ros::Publisher *stop_pub);
         
     private:
         double h = 0;

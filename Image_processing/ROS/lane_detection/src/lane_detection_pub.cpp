@@ -15,6 +15,7 @@ void* stopLinePassThread(void *ret);
 bool stop_line_detect = true;
 bool thread_run = false;
 
+
 LaneDetector::LaneDetector() : h(480), w(640)
 {
 }
@@ -56,22 +57,26 @@ cv::Mat LaneDetector::roi(const cv::Mat &image)
 {
     cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8U);
     cv::Mat masked_img;
-    vector<vector<cv::Point2i>> shape = { { {0, 0},{int(w) - 100, 0},{int(w) - 100, int(h)},{0, int(h)} } };
+    vector<vector<cv::Point2i>> shape = { { {150, 0},{int(w) - 150, 0},{int(w) - 150, int(h)},{150, int(h)} } };
     cv::fillPoly(mask, shape, 255);
     cv::bitwise_and(image, mask, masked_img);
 
     return masked_img;
 }
 
-cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, int num, ros::Publisher *center_pub) 
+cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, const cv::Mat &minv, int num, ros::Publisher *center_pub) 
 {
     std_msgs::Int32 center_pub_val;
-    cv::Mat out_img = binary_img.clone(), img_cp;
+    cv::Mat out_img = binary_img.clone(), img_cp, out, rect_img, w_img;
     vector<int> max_wleft, max_wright;
     int max_left = 0, max_right = 0, max = 0, margin = 30, minpix = 50, thickness = 2;
     cv::Scalar left_color(255, 0, 0);
-    cv::Scalar right_color(0, 0, 255);
+    cv::Scalar right_color(255, 0, 0);
+    //vector<cv::Mat> temp = {binary_img, binary_img, binary_img};
+    //merge(temp, out_img);
     const double *next;
+    cv::Mat mask = cv::Mat::zeros(int(h), int(w), CV_8UC1);
+    cv::Point ret[1][6];
 
     for (int wd=0;wd<num;wd++)
     {
@@ -122,40 +127,57 @@ cv::Mat LaneDetector::windowRoi(const cv::Mat &binary_img, int num, ros::Publish
     //우회전 (왼쪽 선 참조)
     if (max_wleft[1] - max_wleft[0] > 0)
     {
-        //cout << "LEFT LINE" << endl;
+        cout << "LEFT LINE" << endl;
         if (max_wleft[3] > 100)
             max = max_wleft[3];
         else
             max = max_wleft[1];
         center_pub_val.data = max + 102;
         center = max + 102;
-        cout << center_pub_val.data << endl;
+        //cv::circle(out_img, cv::Point(center, h-150), 5, left_color, -1);
     }
     
     //좌회전 (오른쪽 선 참조)
     else if (max_wright[0] - max_wright[1] > 0)
     {
-        //cout << "RIGHT LINE" << endl;
+        cout << "RIGHT LINE" << endl;
         if (max_wright[3] > 0)
             max = max_wright[3];
         else
             max = max_wright[2];
         center_pub_val.data = max - 102;
         center = max - 102;
-        cout << center_pub_val.data << endl;
+        //cv::circle(out_img, cv::Point(center, h-150), 5, right_color, -1);
     }
     
     else
     {
-        //cout << "LEFT LINE " <<endl;
+        cout << "BOTH" <<endl;
         if (max_wleft[3] > 100)
             max = max_wleft[3];
         else
             max = max_wleft[1];
         center_pub_val.data = max + 102;
         center = max + 102;
-        cout << center_pub_val.data << endl;
+        //cv::circle(out_img, cv::Point(center, h-150), 5, left_color, -1);
     }
+    
+    /*for(int l = 0; l < 3; l++)
+    {
+        ret[0][l] = cv::Point(max_wleft[l], h-50*l);
+    }
+    for(int r = 0; r < 3; r++)
+    {
+        ret[0][r+3] = cv::Point(max_wright[2-r], h-50*(2-r));
+    }
+    //cv::rectangle(out_img, cv::Point(center - 50, h-150), cv::Point(center + 50, h - 100), cv::Scalar(255, 0, 0), thickness);
+    
+    const cv::Point* ppt[1] = { ret[0] };
+    int npt[] = { 6 };
+    cv::fillPoly(mask, ppt, npt, 1, cv::Scalar( 216, 168, 74 ), cv::LINE_8);
+    cv::warpPerspective(out_img, w_img, minv, cv::Size(w, h));
+    cv::warpPerspective(mask, rect_img, minv, cv::Size(w, h));
+    cv::addWeighted(w_img, 1, rect_img, 0.4, 0, out);*/
     
     center_pub -> publish(center_pub_val);
 
@@ -171,7 +193,7 @@ void LaneDetector::stopLine(const cv::Mat &binary_img, ros::Publisher *stop_pub)
     int input = 0;
     cv::Mat hist, img_cp, horizontal, horizontal_img;
     
-    cv::Rect rect(center - 50, h-150, 50, 50);
+    cv::Rect rect(327 - 25, h-150, 50, 100);
     img_cp = binary_img(rect);
     horizontal = img_cp.clone();
     
@@ -223,6 +245,12 @@ int main(int argc, char** argv)
     ros::Publisher stop_pub = nh.advertise<std_msgs::Int32>("pi/stop", 1);
 
     cv::VideoCapture cap(0);
+    
+    cv::VideoWriter writer;
+    int fourcc = cv::VideoWriter::fourcc('X', 'V', 'I', 'D');
+    double fps = 20.0;
+    string filename = "/home/pi/test.avi";
+    writer.open(filename, fourcc, fps, cv::Size(640, 480), true);
 
     cv::Mat mtx = (cv::Mat1d(3, 3) << 375.02024751, 0., 316.52572289, 0., 490.14999206, 288.56330145, 0., 0., 1.);
     cv::Mat dist = (cv::Mat1d(1, 5) << -0.30130634,  0.09320542, - 0.00809047,  0.00165312, - 0.00639115);
@@ -243,8 +271,11 @@ int main(int argc, char** argv)
         if(!src.empty())
         {
             //double st=static_cast<double>(cv::getTickCount());
-            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, out, save_img;
-
+            cv::Mat filtered_img, rotate_img, img, warped_img, minv, roi_img, window_img, out, save_img;
+            
+            cv::flip(src, save_img, -1);
+            writer.write(save_img);
+            
             //Color filter
             filtered_img = lane_detector -> colorFilter(src);
 
@@ -263,9 +294,9 @@ int main(int argc, char** argv)
             roi_img = lane_detector -> roi(warped_img);
             
             //Window ROI
-            out = lane_detector -> windowRoi(roi_img, 4, &center_pub);
+            out = lane_detector -> windowRoi(roi_img, minv, 4, &center_pub);
             
-            Image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", out).toImageMsg();
+            Image = cv_bridge::CvImage(std_msgs::Header(), "mono8", out).toImageMsg();
             img_pub.publish(Image);
             
             
@@ -304,6 +335,8 @@ int main(int argc, char** argv)
         }
         ros::spinOnce();
     }
+    
+    writer.release();
 
     return 0;
 }
