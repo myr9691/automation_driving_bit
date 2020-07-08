@@ -1,6 +1,6 @@
 ## Result Video
-[![Video Label](http://img.youtube.com/vi/TaoRwRa8nq4/maxresdefault.jpg)](https://youtu.be/TaoRwRa8nq4)
-[![Video Label](http://img.youtube.com/vi/_td5F_plBig/maxresdefault.jpg)](https://youtu.be/_td5F_plBig)
+[![Video Label](https://user-images.githubusercontent.com/49478077/86878450-dcc2ee00-c123-11ea-8738-a75b5461e7ad.PNG)](https://youtu.be/TaoRwRa8nq4)
+[![Video Label](https://user-images.githubusercontent.com/49478077/86878363-b0a76d00-c123-11ea-9518-c2e5a210ce58.PNG)](https://youtu.be/_td5F_plBig)
 
 #### 2020-05-18
 ***
