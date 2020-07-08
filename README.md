@@ -1,6 +1,6 @@
 ## Result Video
-[![Video Label](http://img.youtube.com/vi/uLR1RNqJ1Mw/0.jpg)](https://youtu.be/TaoRwRa8nq4)
-[![Video Label](http://img.youtube.com/vi/uLR1RNqJ1Mw/0.jpg)](https://youtu.be/_td5F_plBig)
+[![Video Label](http://img.youtube.com/vi/TaoRwRa8nq4/maxresdefault.jpg)](https://youtu.be/TaoRwRa8nq4)
+[![Video Label](http://img.youtube.com/vi/_td5F_plBig/maxresdefault.jpg)](https://youtu.be/_td5F_plBig)
 
 #### 2020-05-18
 ***
