@@ -1,6 +1,36 @@
 ## Result Video
-[![Video Label](https://user-images.githubusercontent.com/49478077/86878450-dcc2ee00-c123-11ea-8738-a75b5461e7ad.PNG)](https://youtu.be/TaoRwRa8nq4)
+#####result.mp4
 [![Video Label](https://user-images.githubusercontent.com/49478077/86878363-b0a76d00-c123-11ea-9518-c2e5a210ce58.PNG)](https://youtu.be/_td5F_plBig)
+[![Video Label](https://user-images.githubusercontent.com/49478077/86878450-dcc2ee00-c123-11ea-8738-a75b5461e7ad.PNG)](https://youtu.be/TaoRwRa8nq4)
+
+## 팀원
+* 문예리
+  * 프로젝트 총괄(팀장)
+  * 차선 인식 설계 및 구현
+  * 자율 주차 설계 및 구현
+* 이명상
+  * 객체 인식 설계 및 구현
+  * 기구 설계 및 구현
+* 김주성
+  * UI 설계 및 구현
+  * 임베디드 설계 및 구현
+
+## 01. 프로젝트 개요
+[자율 주행 시스템]
+1. OpenCV를 이용한 차선 인식 시스템 개발
+2. TensorFlow Lite를 이용한 객체 인식 시스템 개발
+3. On-Device 시스템 개발
+4. ADAS 시스템 구현
+  * 차선 유지 보조 시스템
+  * 자율 주차 시스템
+  * 전방 충돌방지 보조 시스템
+  * 도로 상황 보조 시스템(신호등 및 표지판)
+  
+## 02. 시스템 구성
+[시스템 설계]
+
+[개발 환경]
+
 
 #### 2020-05-18
 ***
