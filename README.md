@@ -27,10 +27,11 @@
   * 도로 상황 보조 시스템(신호등 및 표지판)
   
 ## 02. 시스템 구성
-[시스템 설계]
+#### [시스템 설계]
+![Screenshot from 2021-01-24 19-37-29](https://user-images.githubusercontent.com/49478077/105627724-e1f74880-5e7b-11eb-9225-968274f69f04.png)
 
-[개발 환경]
-
+#### [개발 환경]
+![Screenshot from 2021-01-24 19-37-33](https://user-images.githubusercontent.com/49478077/105627747-f89d9f80-5e7b-11eb-8ec1-88dee5904927.png)
 
 #### 2020-05-18
 ***
